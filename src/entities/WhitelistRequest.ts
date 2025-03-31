@@ -1,4 +1,5 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { NodeListing } from "./NodeListing";
 
 @Entity("whitelist_requests")
 export class WhitelistRequest {
@@ -22,4 +23,8 @@ export class WhitelistRequest {
 
     @Column()
     timestamp!: Date;
+
+    @ManyToOne(() => NodeListing, nodeListing => nodeListing.whitelistRequests)
+    @JoinColumn({ name: "nodeAddress", referencedColumnName: "nodeAddress" })
+    node!: NodeListing;
 } 

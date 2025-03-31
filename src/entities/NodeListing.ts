@@ -1,11 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import { WhitelistRequest } from "./WhitelistRequest";
 
 @Entity("node_listings")
 export class NodeListing {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @Column({ name: "nodeAddress" })
+    @Column({ name: "nodeAddress", unique: true })
     nodeAddress!: string;
 
     @Column({ name: "operatorAddress" })
@@ -28,4 +29,7 @@ export class NodeListing {
 
     @Column()
     timestamp!: Date;
+
+    @OneToMany(() => WhitelistRequest, whitelistRequest => whitelistRequest.node)
+    whitelistRequests!: WhitelistRequest[];
 } 

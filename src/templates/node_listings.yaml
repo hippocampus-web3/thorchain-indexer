@@ -20,3 +20,4 @@ columns:
 
 # Parser function to use
 parser: "nodeListing" 
+minAmount: 10000000

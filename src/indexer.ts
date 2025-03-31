@@ -54,77 +54,92 @@ export class Indexer {
       );
       logger.debug(`Updated last processed block for address ${address} to ${block}`);
     } catch (error) {
-      logger.error(`Error updating last processed block for address ${address}:`, error);
+      logger.error(`Error updating last processed block for address ${address}: ${(error as Error)?.message}`);
+      logger.silly(`Error updating last processed block for address ${address}:`, error);
       throw error;
     }
   }
 
-  private filterActionsByPrefix(actions: MidgardAction[], prefix: string): MidgardAction[] {
-    const filtered = actions.filter(action => action.metadata.send.memo.startsWith(prefix));
-    logger.debug(`Filtered ${actions.length} actions to ${filtered.length} with prefix ${prefix}`);
-    return filtered;
+  private checkTransactionAmount(action: MidgardAction, minBaseAmount: number) {
+    let isValid = false
+    const baseAmount = action.in[0]?.coins.find(coin => coin.asset === 'THOR.RUNE')?.amount;
+    if (!baseAmount) {
+      isValid = false;
+    }
+    isValid = Number(baseAmount) >= minBaseAmount;
+    if (!isValid) {
+      logger.warn(`Skipping action ${action.in[0]?.txID}: insufficient amount. minBaseAmount ${minBaseAmount} baseAmount ${baseAmount}`);
+      throw new Error(`Skipping action ${action.in[0]?.txID}: insufficient amount`);
+    }
   }
 
-  async processTemplate(template: Template) {
-    try {
-      logger.info(`Processing template for address ${template.address}`);
-      const lastBlock = await this.getLastProcessedBlock(template.address);
-      const actions = await this.midgardClient.getActions(template.address);
-      
-      // Filter actions by height
-      const newActions = actions.filter(action => action.height > lastBlock);
-      logger.info(`Found ${newActions.length} new actions for address ${template.address}`);
-      
-      // Process each prefix
+  private async processAction(action: MidgardAction, templates: Template[]) {
+    for (const template of templates) {
       for (const prefix of template.prefix) {
-        logger.debug(`Processing prefix ${prefix} for address ${template.address}`);
-        const filteredActions = this.filterActionsByPrefix(newActions, prefix);
-        const parser = getParser(template.parser);
-        const repository = this.dbManager.getRepository(template.table);
-
-        for (const action of filteredActions) {
+        if (action.metadata.send.memo.startsWith(prefix)) {
           try {
-            const parsedData = parser(action);
+            this.checkTransactionAmount(action, template.minAmount)
+            const parser = getParser(template.parser);
+            const repository = this.dbManager.getRepository(template.table);
+            const parsedData = await parser(action);
             await repository.save(parsedData);
-            logger.debug(`Saved action ${action.in[0]?.txID} for address ${template.address}`);
+            logger.debug(`Saved action ${action.in[0]?.txID} for template ${template.table}`);
           } catch (error) {
-            logger.warn(`Error processing action ${action.in[0]?.txID}:`, error);
+            if (error instanceof Error && error.message.includes('does not exist')) {
+              logger.warn(`Skipping invalid action ${action.in[0]?.txID}: ${error.message}`);
+            } else {
+              logger.error(`Error processing action ${action.in[0]?.txID} for template ${template.table}: ${(error as Error)?.message}`);
+              logger.silly(`Error processing action ${action.in[0]?.txID} for template ${template.table}:`, error);
+            }
           }
         }
       }
+    }
+  }
+
+  async processAddress(address: string) {
+    try {
+      logger.info(`Processing all templates for address ${address}`);
+      const lastBlock = await this.getLastProcessedBlock(address);
+      const actions = await this.midgardClient.getActions(address, lastBlock);
+
+      // Get all templates for this address
+      const addressTemplates = this.templates.filter(t => t.address === address);
+      logger.debug(`Processing ${addressTemplates.length} templates for address ${address}`);
+
+      logger.info(`Found ${actions.length} new actions from block ${lastBlock} for address ${address}`);
+      // Process each action
+      for (const action of actions) {
+        await this.processAction(action, addressTemplates);
+      }
 
       // Update last processed block
-      if (newActions.length > 0) {
-        const maxBlock = Math.max(...newActions.map(a => a.height));
-        await this.updateLastProcessedBlock(template.address, maxBlock);
-        logger.info(`Updated last processed block for address ${template.address} to ${maxBlock}`);
+      if (actions.length > 0) {
+        const maxBlock = Math.max(...actions.map(a => a.height));
+        await this.updateLastProcessedBlock(address, maxBlock + 1);
+        logger.info(`Updated last processed block for address ${address} to ${maxBlock}`);
       }
     } catch (error) {
-      logger.error(`Error processing template for address ${template.address}:`, error);
+      logger.error(`Error processing templates for address ${address}: ${(error as Error)?.message}`);
+      logger.silly(`Error processing templates for address ${address}:`, error);
       throw error;
     }
   }
 
   async processAllTemplates() {
     logger.info('Starting to process all templates');
-    for (const template of this.templates) {
+    // Get unique addresses
+    const uniqueAddresses = [...new Set(this.templates.map(t => t.address))];
+    logger.info(`Found ${uniqueAddresses.length} unique addresses to process`);
+    
+    for (const address of uniqueAddresses) {
       try {
-        await this.processTemplate(template);
+        await this.processAddress(address);
       } catch (error) {
-        logger.error(`Error processing template for address ${template.address}:`, error);
+        logger.error(`Error processing address ${address}: ${(error as Error)?.message}`);
+        logger.silly(`Error processing address ${address}:`, error);
       }
     }
     logger.info('Finished processing all templates');
-  }
-
-  async close() {
-    try {
-      logger.info('Closing indexer...');
-      await this.dbManager.close();
-      logger.info('Indexer closed successfully');
-    } catch (error) {
-      logger.error('Error closing indexer:', error);
-      throw error;
-    }
   }
 } 

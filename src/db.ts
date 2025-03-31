@@ -1,5 +1,4 @@
 import { Repository, ObjectLiteral } from 'typeorm';
-import { Template } from './types';
 import { AppDataSource } from './data-source';
 import { IndexerState } from './entities/IndexerState';
 import { NodeListing } from './entities/NodeListing';

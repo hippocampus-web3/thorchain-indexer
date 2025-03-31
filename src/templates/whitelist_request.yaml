@@ -1,7 +1,8 @@
 table: whitelist_requests
-address: thor1m2wc44uct7u0avwqrcxjtnlljvsnrzk32qmlrc
+address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
 prefix: ["TB:WHT"]
 parser: whitelistRequest
+minAmount: 10000000
 columns:
   id: int
   nodeAddress: string

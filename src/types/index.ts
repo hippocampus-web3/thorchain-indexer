@@ -5,7 +5,8 @@ export const TemplateSchema = z.object({
   prefix: z.array(z.string()),
   table: z.string(),
   columns: z.record(z.string(), z.string()),
-  parser: z.string()
+  parser: z.string(),
+  minAmount: z.number()
 });
 
 export type Template = z.infer<typeof TemplateSchema>;
@@ -29,7 +30,7 @@ export interface MidgardAction {
     }
   };
   in: Array<{
-    addresses: string[];
+    address: string;
     txID: string;
     coins: Array<{
       asset: string;
@@ -37,7 +38,7 @@ export interface MidgardAction {
     }>;
   }>;
   out: Array<{
-    addresses: string[];
+    address: string;
     txID: string;
     coins: Array<{
       asset: string;

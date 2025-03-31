@@ -12,11 +12,13 @@ export class MidgardClient {
 
   async getActions(
     address: string,
+    fromHeight?: number,
     nextPageToken?: string
   ): Promise<MidgardResponse["actions"]> {
     const url = `${this.baseUrl}/v2/actions`;
     const params: Record<string, string | number> = {
       address,
+      fromHeight: fromHeight ? fromHeight : 0,
       limit: 600,
       offset: 0,
       type: "send",
