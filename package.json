@@ -11,13 +11,13 @@
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm -- migration:generate src/migrations/Migration -d src/data-source.ts",
     "migration:run": "npm run typeorm -- migration:run -d src/data-source.ts",
-    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts",
-    "migration:generate-templates": "ts-node src/scripts/generateTemplateMigrations.ts"
+    "migration:revert": "npm run typeorm -- migration:revert -d src/data-source.ts"
   },
   "dependencies": {
     "axios": "^1.6.7",
     "pg": "^8.11.3",
     "typeorm": "^0.3.20",
+    "winston": "^3.17.0",
     "yaml": "^2.3.4",
     "zod": "^3.22.4"
   },

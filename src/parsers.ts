@@ -7,26 +7,40 @@ export interface ParserResult {
 export const parsers = {
   nodeListing: (action: MidgardAction): ParserResult => {
     const memo = action.metadata.send.memo;
-    if (!memo.startsWith('TB:')) {
-      throw new Error(`Invalid memo format for node listing: ${memo}`);
-    }
 
     const parts = memo.split(':');
-    if (parts.length !== 6) {
+    if (parts.length !== 7) {
       throw new Error(`Invalid memo format for node listing: ${memo}`);
     }
 
     return {
-      nodeAddress: parts[1],
-      operatorAddress: parts[2],
-      minRune: Number(parts[3]),
-      maxRune: Number(parts[4]),
-      feePercentage: Number(parts[5]),
+      nodeAddress: parts[2],
+      operatorAddress: parts[3],
+      minRune: Number(parts[4]),
+      maxRune: Number(parts[5]),
+      feePercentage: Number(parts[6]),
       txId: action.in[0]?.txID,
       height: action.height,
-      timestamp: action.date
+      timestamp: new Date(action.date)
     };
   },
+  whitelistRequest: (action: MidgardAction) => {
+    const memo = action.metadata.send.memo;
+
+    const parts = memo.split(':').slice(1);
+    if (parts.length !== 5) {
+      throw new Error(`Invalid memo format for node listing: ${memo}`);
+    }
+
+    return {
+        nodeAddress: parts[2],
+        userAddress: parts[3],
+        intendedBondAmount: parseInt(parts[4]),
+        txId: action.in[0].txID,
+        height: action.height,
+        timestamp: new Date(action.date)
+    };
+  } 
 };
 
 export type ParserFunction = (action: MidgardAction) => ParserResult;

@@ -1,0 +1,12 @@
+table: whitelist_requests
+address: thor1m2wc44uct7u0avwqrcxjtnlljvsnrzk32qmlrc
+prefix: ["TB:WHT"]
+parser: whitelistRequest
+columns:
+  id: int
+  nodeAddress: string
+  userAddress: string
+  intendedBondAmount: int
+  txId: string
+  height: int
+  timestamp: timestamp 
