@@ -1,0 +1,22 @@
+# Address to monitor
+address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
+
+# Valid memo prefixes to process
+prefix: ["TB:"]
+
+# Table name where data will be stored
+table: "node_listings"
+
+# Table schema definition
+columns:
+  nodeAddress: "string"  # Node's THORChain address
+  operatorAddress: "string" # Operator's THORChain address
+  minRune: "int" # Minimum Rune amount
+  maxRune: "int" # Maximum Rune amount
+  feePercentage: "int" # Fee percentage
+  txId: "string"        # Transaction ID
+  height: "int"         # Block height
+  timestamp: "timestamp" # Transaction timestamp
+
+# Parser function to use
+parser: "nodeListing" 
