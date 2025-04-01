@@ -1,9 +1,9 @@
 import { MidgardClient } from './midgardClient';
-import { DatabaseManager } from './db';
+import { DatabaseManager } from '../db';
 import { TemplateLoader } from './loadTemplates';
 import { getParser } from './parsers';
-import { Template, MidgardAction } from './types';
-import logger from './utils/logger';
+import { Template, MidgardAction } from '../types';
+import logger from '../utils/logger';
 
 export class Indexer {
   private midgardClient: MidgardClient;

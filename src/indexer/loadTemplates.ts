@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'fs';
 import { join } from 'path';
 import { parse } from 'yaml';
-import { Template, TemplateSchema } from './types';
+import { Template, TemplateSchema } from '../types';
 
 export class TemplateLoader {
   private templatesDir: string;

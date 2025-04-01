@@ -1,5 +1,5 @@
 import { Indexer } from './indexer';
-import { DatabaseManager } from './db';
+import { DatabaseManager } from '../db';
 import dotenv from 'dotenv';
 
 dotenv.config();

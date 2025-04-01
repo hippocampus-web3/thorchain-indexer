@@ -1,8 +1,8 @@
-import { AppDataSource } from './data-source';
-import { NodeListing } from './entities/NodeListing';
+import { AppDataSource } from '../data-source';
+import { NodeListing } from '../entities/NodeListing';
 import { getAllNodes } from './thornodeClient';
-import { MidgardAction } from './types';
-import logger from './utils/logger';
+import { MidgardAction } from '../types';
+import logger from '../utils/logger';
 
 export interface ParserResult {
   [key: string]: any;

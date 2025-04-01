@@ -1,0 +1,10 @@
+{
+    "services": {
+      "api": {
+        "rootDirectory": "apps/api"
+      },
+      "indexer": {
+        "rootDirectory": "apps/indexer"
+      }
+    }
+  }

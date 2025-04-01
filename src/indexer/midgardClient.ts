@@ -1,5 +1,5 @@
 import axios from "axios";
-import { MidgardResponse } from "./types";
+import { MidgardResponse } from "../types";
 
 const MIDGARD_API_URL = "https://midgard.ninerealms.com";
 

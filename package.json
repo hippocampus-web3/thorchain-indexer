@@ -4,9 +4,9 @@
   "description": "Indexador genérico para THORChain usando plantillas YAML",
   "main": "dist/index.js",
   "scripts": {
-    "build": "tsc",
-    "start": "node dist/index.js",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/index.ts",
+    "indexer:build": "tsc",
+    "indexer:start": "node dist/indexer/index.js",
+    "indexer:dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/indexer/index.ts",
     "watch": "tsc -w",
     "typeorm": "typeorm-ts-node-commonjs",
     "migration:generate": "npm run typeorm -- migration:generate src/migrations/Migration -d src/data-source.ts",
