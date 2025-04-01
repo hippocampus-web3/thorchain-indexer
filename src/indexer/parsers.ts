@@ -1,6 +1,6 @@
 import { AppDataSource } from '../data-source';
 import { NodeListing } from '../entities/NodeListing';
-import { getAllNodes } from './thornodeClient';
+import { getAllNodes } from '../thornodeClient';
 import { MidgardAction } from '../types';
 import logger from '../utils/logger';
 
@@ -21,7 +21,7 @@ export const parsers = {
     const nodeAddress = parts[2]
 
     if (operatorAddress !== action.in[0]?.address) {
-      logger.warn(`Whitelist request rejected: Impersonated node operator ${operatorAddress}`);
+      logger.warn(`Node list request rejected: Impersonated node operator ${operatorAddress}`);
       throw new Error(`Impersonated node operator ${nodeAddress}`);
     }
 
@@ -46,7 +46,7 @@ export const parsers = {
     }
 
     if (operatorAddress !== action.in[0]?.address) {
-      logger.warn(`Whitelist request rejected: Impersonated node operator ${operatorAddress}`);
+      logger.warn(`Node list request rejected: Impersonated node operator ${operatorAddress}`);
       throw new Error(`Impersonated node operator ${nodeAddress}`);
     }
 
@@ -54,8 +54,8 @@ export const parsers = {
     const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress && on.node_operator_address === operatorAddress)
 
     if (!officialNodeInfo) {
-      logger.warn(`Whitelist request rejected: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
-      throw new Error(`Whitelist request rejected: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
+      logger.warn(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
+      throw new Error(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
     }
 
     return {

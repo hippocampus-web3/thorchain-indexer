@@ -1,61 +1,102 @@
-import { Request, Response } from 'express';
-import { AppDataSource } from '../../data-source';
-import { WhitelistRequest } from '../../entities/WhitelistRequest';
-import logger from '../../utils/logger';
+import { Request, Response } from "express";
+import { AppDataSource } from "../../data-source";
+import { WhitelistRequest } from "../../entities/WhitelistRequest";
+import logger from "../../utils/logger";
+import { getBondInfoForUser } from "../../thornodeClient";
 
 export class WhitelistController {
-  async getWhitelistRequests(req: Request, res: Response) {
+  getWhitelistRequests =  async (req: Request, res: Response) => {
     try {
-      const { page = 1, limit = 10, nodeAddress } = req.query;
+      const { page = 1, limit = 10, address } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
-      const queryBuilder = AppDataSource.getRepository(WhitelistRequest)
-        .createQueryBuilder('whitelist')
-        .leftJoinAndSelect('whitelist.node', 'node');
-
-      if (nodeAddress) {
-        queryBuilder.andWhere('node.nodeAddress = :nodeAddress', { nodeAddress });
+      if (!address) {
+        return res
+          .status(400)
+          .json({ error: "Node address or user address is required" });
       }
+
+      // TODO: Review corner case node provider with user requests to other nodes (makes sense ?)
+      const queryBuilder = AppDataSource.getRepository(WhitelistRequest)
+        .createQueryBuilder("whitelist")
+        .leftJoinAndSelect("whitelist.node", "node")
+        .where(
+          "(node.operatorAddress = :address OR whitelist.userAddress = :address)",
+          { address }
+        );
 
       const total = await queryBuilder.getCount();
 
       const requests = await queryBuilder
-        .orderBy('whitelist.timestamp', 'DESC')
+        .orderBy("whitelist.timestamp", "DESC")
         .skip(skip)
         .take(Number(limit))
         .getMany();
 
+      // TODO: Find optimal point between parallel requests and rate limits. Right now it's not parallel
+      const finalRequests = [];
+      for (const request of requests) {
+        const requestWithStatusAndBond = await this.computeWhitelistStatusAndBond(request);
+        finalRequests.push(requestWithStatusAndBond);
+      }
+
       return res.json({
-        data: requests,
+        data: finalRequests,
         pagination: {
           total,
           page: Number(page),
           limit: Number(limit),
-          totalPages: Math.ceil(total / Number(limit))
-        }
+          totalPages: Math.ceil(total / Number(limit)),
+        },
       });
     } catch (error) {
-      logger.error('Error getting whitelist requests:', error);
-      return res.status(500).json({ error: 'Error getting whitelist requests' });
+      logger.error("Error getting whitelist requests:", error);
+      return res
+        .status(500)
+        .json({ error: "Error getting whitelist requests" });
     }
   }
 
-  async getWhitelistRequestById(req: Request, res: Response) {
+  getWhitelistRequestById = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const request = await AppDataSource.getRepository(WhitelistRequest).findOne({
+      const request = await AppDataSource.getRepository(
+        WhitelistRequest
+      ).findOne({
         where: { id: Number(id) },
-        relations: ['node']
+        relations: ["node"],
       });
 
       if (!request) {
-        return res.status(404).json({ error: 'Whitelist request not found' });
+        return res.status(404).json({ error: "Whitelist request not found" });
       }
 
       return res.json(request);
     } catch (error) {
-      logger.error('Error getting whitelist request:', error);
-      return res.status(500).json({ error: 'Internal server error' });
+      logger.error("Error getting whitelist request:", error);
+      return res.status(500).json({ error: "Internal server error" });
     }
   }
-} 
+
+  computeWhitelistStatusAndBond = async (request: WhitelistRequest) => {
+    const bondInfo = await getBondInfoForUser(
+      request.nodeAddress,
+      request.userAddress
+    );
+
+    let status: "pending" | "approved" | "rejected" | "bonded" = "pending";
+
+    if (bondInfo.isBondProvider) {
+      status = "approved";
+    }
+    if (bondInfo.isBondProvider && bondInfo.bond > 0) {
+      status = "bonded";
+    }
+
+    return {
+      ...request,
+      realBond: bondInfo.bond,
+      status
+    };
+  }
+}
