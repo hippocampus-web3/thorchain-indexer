@@ -4,6 +4,9 @@ import helmet from 'helmet';
 import compression from 'compression';
 import logger from '../utils/logger';
 import { AppDataSource } from '../data-source';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
