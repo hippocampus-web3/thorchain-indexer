@@ -17,7 +17,7 @@ async function main() {
     // Start processing
     while (true) {
       await indexer.processAllTemplates();
-      await new Promise(resolve => setTimeout(resolve, 15000)); // Wait 15 seconds
+      await new Promise(resolve => setTimeout(resolve, 20000)); // Wait 15 seconds
     }
   } catch (error) {
     console.error('Error in main:', error);
