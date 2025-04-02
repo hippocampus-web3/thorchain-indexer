@@ -2,13 +2,27 @@ import axios from "axios";
 
 const THORNODE_API_URL = 'https://thornode.ninerealms.com/thorchain';
 
-export async function getAllNodes(): Promise<any[]> {  
+export async function getAllNodes(): Promise<any[]> {  // TODO: User types
   try {
     const response = await axios.get(`${THORNODE_API_URL}/nodes`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch all nodes:', error);
     throw new Error('Failed to retrieve all nodes');
+  }
+}
+
+export async function getCurrentBlockHeight(): Promise<number> {
+  try {
+    const response = await axios.get(`${THORNODE_API_URL}/lastblock`);
+    const height = response.data?.[0]?.thorchain;
+    if (isNaN(height)) {
+      throw new Error('Invalid block height');
+    }
+    return height;
+  } catch (error) {
+    console.error('Failed to fetch current block height:', error);
+    throw new Error('Failed to retrieve current block height');
   }
 }
 

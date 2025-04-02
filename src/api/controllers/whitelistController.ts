@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { AppDataSource } from "../../data-source";
 import { WhitelistRequest } from "../../entities/WhitelistRequest";
 import logger from "../../utils/logger";
-import { getBondInfoForUser } from "../../thornodeClient";
+import { bondCache } from "../../utils/bondCache";
 
 export class WhitelistController {
   getWhitelistRequests =  async (req: Request, res: Response) => {
@@ -79,7 +79,7 @@ export class WhitelistController {
   }
 
   computeWhitelistStatusAndBond = async (request: WhitelistRequest) => {
-    const bondInfo = await getBondInfoForUser(
+    const bondInfo = await bondCache.getBondInfo(
       request.nodeAddress,
       request.userAddress
     );

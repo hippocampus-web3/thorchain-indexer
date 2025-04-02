@@ -1,8 +1,8 @@
 import { AppDataSource } from '../data-source';
 import { NodeListing } from '../entities/NodeListing';
-import { getAllNodes } from '../thornodeClient';
 import { MidgardAction } from '../types';
 import logger from '../utils/logger';
+import { nodeCache } from '../utils/nodeCache';
 
 export interface ParserResult {
   [key: string]: any;
@@ -50,8 +50,8 @@ export const parsers = {
       throw new Error(`Impersonated node operator ${nodeAddress}`);
     }
 
-    const oficialNodes = await getAllNodes(); // TODO: Optimize this request
-    const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress && on.node_operator_address === operatorAddress)
+    const oficialNodes = await nodeCache.getNodes();
+    const officialNodeInfo = oficialNodes.find(on => on.nodeAddress === nodeAddress && on.operatorAddress === operatorAddress)
 
     if (!officialNodeInfo) {
       logger.warn(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);

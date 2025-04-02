@@ -2,11 +2,17 @@ import { Request, Response } from 'express';
 import { AppDataSource } from '../../data-source';
 import { NodeListing } from '../../entities/NodeListing';
 import logger from '../../utils/logger';
+import { nodeCache } from '../../utils/nodeCache';
+import { getCurrentBlockHeight } from '../../thornodeClient';
 
 export class NodeController {
 
-  async getNodes(req: Request, res: Response) {
+  getNodes = async (req: Request, res: Response) => {
     try {
+
+      const officialNodeInfo: any[] = await nodeCache.getNodes();
+      const currentBlockHeight: number = await getCurrentBlockHeight();
+
       const { page = 1, limit = 10, operatorAddress } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
@@ -25,7 +31,7 @@ export class NodeController {
         .getMany();
 
       return res.json({
-        data: nodes,
+        data: this.populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight),
         pagination: {
           total,
           page: Number(page),
@@ -39,7 +45,7 @@ export class NodeController {
     }
   }
 
-  async getNodeByAddress(req: Request, res: Response) {
+  getNodeByAddress = async (req: Request, res: Response) => {
     try {
       const { address } = req.params;
       const node = await AppDataSource.getRepository(NodeListing).findOne({
@@ -57,4 +63,25 @@ export class NodeController {
     }
   }
 
+  populateNodesWithNetworkInfo = (nodes: NodeListing[], officialNodes: any[], currentBlockHeight: number) => {
+    const nodesWithNetworkInfo = nodes.map(node => {
+      const officialNode = officialNodes.find(on => on.node_address === node.nodeAddress && on.node_operator_address === node.operatorAddress);
+      if (!officialNode) {
+        logger.error(`Node not found in official nodes: ${node.nodeAddress} ${node.operatorAddress}`);
+        throw new Error(`Node not found in official nodes: ${node.nodeAddress} ${node.operatorAddress}`);
+      }
+      return {
+        ...node,
+        status: officialNode?.status,
+        slashPoints: officialNode?.slash_points,
+        activeTime: this.computeActiveTimeInSeconds(officialNode?.status_since, currentBlockHeight),
+        bondProvidersCount: officialNode?.bond_providers.providers.length
+      };
+    });
+    return nodesWithNetworkInfo
+  }
+
+  computeActiveTimeInSeconds = (activeTime: number, currentBlockHeight: number) => {
+    return (currentBlockHeight - activeTime) * 6
+  }
 } 
