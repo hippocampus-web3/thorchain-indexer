@@ -17,8 +17,8 @@ export const parsers = {
       throw new Error(`Invalid memo format for node listing: ${memo}`);
     }
 
-    const operatorAddress = parts[3]
     const nodeAddress = parts[2]
+    const operatorAddress = parts[3]
 
     if (operatorAddress !== action.in[0]?.address) {
       logger.warn(`Node list request rejected: Impersonated node operator ${operatorAddress}`);
@@ -51,7 +51,7 @@ export const parsers = {
     }
 
     const oficialNodes = await nodeCache.getNodes();
-    const officialNodeInfo = oficialNodes.find(on => on.nodeAddress === nodeAddress && on.operatorAddress === operatorAddress)
+    const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress && on.node_operator_address === operatorAddress)
 
     if (!officialNodeInfo) {
       logger.warn(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
