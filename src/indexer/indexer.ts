@@ -103,6 +103,8 @@ export class Indexer {
       const lastBlock = await this.getLastProcessedBlock(address);
       const actions = await this.midgardClient.getActions(address, lastBlock);
 
+      actions.sort((a, b) => Number(a.date) - Number(b.date));
+
       // Get all templates for this address
       const addressTemplates = this.templates.filter(t => t.address === address);
       logger.debug(`Processing ${addressTemplates.length} templates for address ${address}`);
