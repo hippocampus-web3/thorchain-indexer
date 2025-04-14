@@ -3,11 +3,14 @@ import { AppDataSourceApi } from "../../data-source";
 import { WhitelistRequest } from "../../entities/WhitelistRequest";
 import logger from "../../utils/logger";
 import { bondCache } from "../../utils/bondCache";
+import { populateNodesWithNetworkInfo } from "../helpers/populateNodes";
+import { nodeCache } from '../../utils/nodeCache';
+import { getCurrentBlockHeight } from '../../thornodeClient';
 
 export class WhitelistController {
   getWhitelistRequests =  async (req: Request, res: Response) => {
     try {
-      const { page = 1, limit = 10, address } = req.query;
+      const { page = 1, limit = 80, address } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
       if (!address) {
@@ -33,10 +36,15 @@ export class WhitelistController {
         .take(Number(limit))
         .getMany();
 
+      const officialNodeInfo: any[] = await nodeCache.getNodes();
+      const currentBlockHeight: number = await getCurrentBlockHeight();
+
       // TODO: Find optimal point between parallel requests and rate limits. Right now it's not parallel
       const finalRequests = [];
       for (const request of requests) {
         const requestWithStatusAndBond = await this.computeWhitelistStatusAndBond(request);
+        const populatedNodes = populateNodesWithNetworkInfo([requestWithStatusAndBond.node], officialNodeInfo, currentBlockHeight)
+        requestWithStatusAndBond.node = populatedNodes[0]
         finalRequests.push(requestWithStatusAndBond);
       }
 

@@ -92,8 +92,6 @@ export class Indexer {
               logger.silly(`Error processing action ${action.in[0]?.txID} for template ${template.table}:`, error);
             }
           }
-        } else {
-          logger.warn(`Skipping invalid profixed action ${action.in[0]?.txID}`);
         }
       }
     }

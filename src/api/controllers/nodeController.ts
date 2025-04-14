@@ -4,6 +4,7 @@ import { NodeListing } from '../../entities/NodeListing';
 import logger from '../../utils/logger';
 import { nodeCache } from '../../utils/nodeCache';
 import { getCurrentBlockHeight } from '../../thornodeClient';
+import { populateNodesWithNetworkInfo } from '../helpers/populateNodes';
 
 export class NodeController {
 
@@ -13,7 +14,7 @@ export class NodeController {
       const officialNodeInfo: any[] = await nodeCache.getNodes();
       const currentBlockHeight: number = await getCurrentBlockHeight();
 
-      const { page = 1, limit = 10, operatorAddress } = req.query;
+      const { page = 1, limit = 80, operatorAddress } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
       const queryBuilder = AppDataSourceApi.getRepository(NodeListing).createQueryBuilder('node');
@@ -31,7 +32,7 @@ export class NodeController {
         .getMany();
 
       return res.json({
-        data: this.populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight),
+        data: populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight),
         pagination: {
           total,
           page: Number(page),
@@ -61,27 +62,5 @@ export class NodeController {
       logger.error('Error getting node:', error);
       return res.status(500).json({ error: 'Internal server error' });
     }
-  }
-
-  populateNodesWithNetworkInfo = (nodes: NodeListing[], officialNodes: any[], currentBlockHeight: number) => {
-    const nodesWithNetworkInfo = nodes.map(node => {
-      const officialNode = officialNodes.find(on => on.node_address === node.nodeAddress && on.node_operator_address === node.operatorAddress);
-      if (!officialNode) {
-        logger.error(`Node not found in official nodes: ${node.nodeAddress} ${node.operatorAddress}`);
-        throw new Error(`Node not found in official nodes: ${node.nodeAddress} ${node.operatorAddress}`);
-      }
-      return {
-        ...node,
-        status: officialNode?.status,
-        slashPoints: officialNode?.slash_points,
-        activeTime: this.computeActiveTimeInSeconds(officialNode?.status_since, currentBlockHeight),
-        bondProvidersCount: officialNode?.bond_providers.providers.length
-      };
-    });
-    return nodesWithNetworkInfo
-  }
-
-  computeActiveTimeInSeconds = (activeTime: number, currentBlockHeight: number) => {
-    return (currentBlockHeight - activeTime) * 6
   }
 } 
