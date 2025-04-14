@@ -37,8 +37,6 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.11.19",
-    "@xchainjs/xchain-thorchain": "^2.0.14",
-    "@xchainjs/xchain-util": "^1.0.8",
     "axios-mock-adapter": "^2.1.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.9",
