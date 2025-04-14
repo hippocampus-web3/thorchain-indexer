@@ -1,15 +1,14 @@
-import { AppDataSource } from '../data-source';
-import { NodeListing } from '../entities/NodeListing';
 import { MidgardAction } from '../types';
 import logger from '../utils/logger';
 import { nodeCache } from '../utils/nodeCache';
+import { DatabaseManager } from '../db';
 
 export interface ParserResult {
   [key: string]: any;
 }
 
 export const parsers = {
-  nodeListing: async (action: MidgardAction): Promise<ParserResult> => {
+  nodeListing: async (action: MidgardAction, dbManager: DatabaseManager): Promise<ParserResult> => {
     const memo = action.metadata.send.memo;
 
     const parts = memo.split(':');
@@ -25,7 +24,7 @@ export const parsers = {
       throw new Error(`Impersonated node operator ${nodeAddress}`);
     }
 
-    const nodeListingRepo = AppDataSource.getRepository(NodeListing);
+    const nodeListingRepo = dbManager.getRepository('node_listings');
     
     const existingNode = await nodeListingRepo.findOne({ 
         where: { nodeAddress } 
@@ -43,11 +42,6 @@ export const parsers = {
             timestamp: new Date(Math.floor(Number(action.date) / 1000000))
         });
         return existingNode;
-    }
-
-    if (operatorAddress !== action.in[0]?.address) {
-      logger.warn(`Node list request rejected: Impersonated node operator ${operatorAddress}`);
-      throw new Error(`Impersonated node operator ${nodeAddress}`);
     }
 
     const oficialNodes = await nodeCache.getNodes();
@@ -69,7 +63,7 @@ export const parsers = {
       timestamp: new Date(Math.floor(Number(action.date) / 1000000))
     };
   },
-  whitelistRequest: async (action: MidgardAction) => {
+  whitelistRequest: async (action: MidgardAction, dbManager: DatabaseManager) => {
     const memo = action.metadata.send.memo;
 
     const parts = memo.split(':');
@@ -85,7 +79,7 @@ export const parsers = {
         throw new Error(`Impersonated address ${userAddress}`);
     }
 
-    const nodeListingRepo = AppDataSource.getRepository(NodeListing);
+    const nodeListingRepo = dbManager.getRepository('node_listings');
     const node = await nodeListingRepo.findOne({ where: { nodeAddress } });
     
     if (!node) {
@@ -104,7 +98,7 @@ export const parsers = {
   } 
 };
 
-export type ParserFunction = (action: MidgardAction) => ParserResult;
+export type ParserFunction = (action: MidgardAction, dbManager: DatabaseManager) => Promise<ParserResult>;
 export type ParserMap = Record<string, ParserFunction>;
 
 export function getParser(parserName: string): ParserFunction {

@@ -3,7 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
 import logger from '../utils/logger';
-import { AppDataSource } from '../data-source';
+import { AppDataSourceApi } from '../data-source';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -24,22 +24,22 @@ app.get('/health', (req, res) => {
 });
 
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
-  logger.error('Error no manejado:', err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  logger.error('Error not handled:', err);
+  res.status(500).json({ error: 'Internatl server error' });
 });
 
 const startServer = async () => {
   try {
-    if (!AppDataSource.isInitialized) {
-      await AppDataSource.initialize();
+    if (!AppDataSourceApi.isInitialized) {
+      await AppDataSourceApi.initialize();
       logger.info('Conexión a la base de datos establecida');
     }
     
     app.listen(port, () => {
-      logger.info(`API escuchando en el puerto ${port}`);
+      logger.info(`API listin on ${port}`);
     });
   } catch (error) {
-    logger.error('Error al iniciar el servidor:', error);
+    logger.error('Error on servir initalization:', error);
     process.exit(1);
   }
 };

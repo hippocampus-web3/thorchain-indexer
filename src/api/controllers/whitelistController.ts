@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { AppDataSource } from "../../data-source";
+import { AppDataSourceApi } from "../../data-source";
 import { WhitelistRequest } from "../../entities/WhitelistRequest";
 import logger from "../../utils/logger";
 import { bondCache } from "../../utils/bondCache";
@@ -17,7 +17,7 @@ export class WhitelistController {
       }
 
       // TODO: Review corner case node provider with user requests to other nodes (makes sense ?)
-      const queryBuilder = AppDataSource.getRepository(WhitelistRequest)
+      const queryBuilder = AppDataSourceApi.getRepository(WhitelistRequest)
         .createQueryBuilder("whitelist")
         .leftJoinAndSelect("whitelist.node", "node")
         .where(
@@ -60,7 +60,7 @@ export class WhitelistController {
   getWhitelistRequestById = async (req: Request, res: Response) => {
     try {
       const { id } = req.params;
-      const request = await AppDataSource.getRepository(
+      const request = await AppDataSourceApi.getRepository(
         WhitelistRequest
       ).findOne({
         where: { id: Number(id) },
