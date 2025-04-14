@@ -1,20 +1,22 @@
-import { Repository, ObjectLiteral } from 'typeorm';
-import { AppDataSource } from './data-source';
+import { Repository, ObjectLiteral, DataSource } from 'typeorm';
 import { IndexerState } from './entities/IndexerState';
 import { NodeListing } from './entities/NodeListing';
 import { WhitelistRequest } from './entities/WhitelistRequest';
 import logger from './utils/logger';
 
 export class DatabaseManager {
+
+  private dataSource: DataSource;
+
+  constructor(dataSource: DataSource) {
+    this.dataSource = dataSource;
+  }
+
   async initialize() {
     try {
       logger.info('Initializing database connection...');
-      await AppDataSource.initialize();
+      await this.dataSource.initialize();
       logger.info('Database connection initialized successfully');
-      
-      logger.info('Running pending migrations...');
-      await AppDataSource.runMigrations();
-      logger.info('Migrations completed successfully');
     } catch (error) {
       logger.error('Failed to initialize database:', error);
       throw error;
@@ -25,11 +27,11 @@ export class DatabaseManager {
     try {
       switch (tableName) {
         case 'IndexerState':
-          return AppDataSource.getRepository(IndexerState);
+          return this.dataSource.getRepository(IndexerState);
         case 'node_listings':
-          return AppDataSource.getRepository(NodeListing);
+          return this.dataSource.getRepository(NodeListing);
         case 'whitelist_requests':
-          return AppDataSource.getRepository(WhitelistRequest);
+          return this.dataSource.getRepository(WhitelistRequest);
         default:
           logger.error(`Repository not found for table: ${tableName}`);
           throw new Error(`No repository found for table: ${tableName}`);
@@ -43,7 +45,7 @@ export class DatabaseManager {
   async close() {
     try {
       logger.info('Closing database connection...');
-      await AppDataSource.destroy();
+      await this.dataSource.destroy();
       logger.info('Database connection closed successfully');
     } catch (error) {
       logger.error('Error closing database connection:', error);

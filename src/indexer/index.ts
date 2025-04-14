@@ -1,5 +1,6 @@
 import { Indexer } from './indexer';
 import { DatabaseManager } from '../db';
+import { AppDataSource } from '../data-source';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -7,11 +8,11 @@ dotenv.config();
 async function main() {
   try {
     // Initialize database first
-    const dbManager = new DatabaseManager();
+    const dbManager = new DatabaseManager(AppDataSource);
     await dbManager.initialize();
 
     // Then create and initialize indexer
-    const indexer = new Indexer();
+    const indexer = new Indexer(dbManager);
     await indexer.initialize();
 
     // Start processing

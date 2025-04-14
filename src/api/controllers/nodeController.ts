@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AppDataSource } from '../../data-source';
+import { AppDataSourceApi } from '../../data-source';
 import { NodeListing } from '../../entities/NodeListing';
 import logger from '../../utils/logger';
 import { nodeCache } from '../../utils/nodeCache';
@@ -16,7 +16,7 @@ export class NodeController {
       const { page = 1, limit = 10, operatorAddress } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
 
-      const queryBuilder = AppDataSource.getRepository(NodeListing).createQueryBuilder('node');
+      const queryBuilder = AppDataSourceApi.getRepository(NodeListing).createQueryBuilder('node');
 
       if (operatorAddress) {
         queryBuilder.andWhere('node.operatorAddress = :operatorAddress', { operatorAddress });
@@ -48,7 +48,7 @@ export class NodeController {
   getNodeByAddress = async (req: Request, res: Response) => {
     try {
       const { address } = req.params;
-      const node = await AppDataSource.getRepository(NodeListing).findOne({
+      const node = await AppDataSourceApi.getRepository(NodeListing).findOne({
         where: { nodeAddress: address }
       });
 

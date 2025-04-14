@@ -11,9 +11,9 @@ export class Indexer {
   private templateLoader: TemplateLoader;
   private templates: Template[] = [];
 
-  constructor() {
+  constructor(dbManager: DatabaseManager) {
     this.midgardClient = new MidgardClient();
-    this.dbManager = new DatabaseManager();
+    this.dbManager = dbManager;
     this.templateLoader = new TemplateLoader();
   }
 
@@ -81,7 +81,7 @@ export class Indexer {
             this.checkTransactionAmount(action, template.minAmount)
             const parser = getParser(template.parser);
             const repository = this.dbManager.getRepository(template.table);
-            const parsedData = await parser(action);
+            const parsedData = await parser(action, this.dbManager);
             await repository.save(parsedData);
             logger.debug(`Saved action ${action.in[0]?.txID} for template ${template.table}`);
           } catch (error) {
@@ -92,6 +92,8 @@ export class Indexer {
               logger.silly(`Error processing action ${action.in[0]?.txID} for template ${template.table}:`, error);
             }
           }
+        } else {
+          logger.warn(`Skipping invalid profixed action ${action.in[0]?.txID}`);
         }
       }
     }
