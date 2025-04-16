@@ -1,7 +1,7 @@
 import { MidgardAction } from '../types';
 import logger from '../utils/logger';
-import { nodeCache } from '../utils/nodeCache';
 import { DatabaseManager } from '../db';
+import { genericCache } from '../utils/genericCache';
 
 export interface ParserResult {
   [key: string]: any;
@@ -44,7 +44,7 @@ export const parsers = {
         return existingNode;
     }
 
-    const oficialNodes = await nodeCache.getNodes();
+    const oficialNodes = await genericCache.getNodes();
     const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress && on.node_operator_address === operatorAddress)
 
     if (!officialNodeInfo) {

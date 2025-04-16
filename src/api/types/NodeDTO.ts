@@ -16,10 +16,11 @@ export type NodeDTO = {
     bondProvidersCount: any;
     officialInfo: {
         currentFee: number;
+        minimumBondInRune: number;
     };
     isHidden?: {
         hide: boolean,
-        reason: string | null
+        reasons: string[] | null
     }
     whitelistRequests: WhitelistRequest[]
 }

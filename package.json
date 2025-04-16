@@ -20,11 +20,14 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@xchainjs/xchain-thornode": "^0.3.22",
+    "@xchainjs/xchain-util": "^1.0.8",
     "axios": "^1.6.7",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "helmet": "^7.1.0",
+    "node-cache": "^5.1.2",
     "pg": "^8.11.3",
     "typeorm": "^0.3.20",
     "winston": "^3.17.0",
