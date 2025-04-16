@@ -2,6 +2,7 @@ import { Indexer } from './indexer';
 import { DatabaseManager } from '../db';
 import { AppDataSource } from '../data-source';
 import dotenv from 'dotenv';
+import logger from '../utils/logger';
 
 dotenv.config();
 
@@ -21,7 +22,7 @@ async function main() {
       await new Promise(resolve => setTimeout(resolve, 20000)); // Wait 15 seconds
     }
   } catch (error) {
-    console.error('Error in main:', error);
+    logger.error('Error in main:', error);
     process.exit(1);
   }
 }

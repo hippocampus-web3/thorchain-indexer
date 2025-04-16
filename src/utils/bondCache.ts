@@ -1,4 +1,4 @@
-import { getBondInfoForUser } from '../thornodeClient';
+import { getBondInfoForUser } from './thornodeClient';
 import logger from './logger';
 
 interface BondInfo {

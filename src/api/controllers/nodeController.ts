@@ -2,17 +2,17 @@ import { Request, Response } from 'express';
 import { AppDataSourceApi } from '../../data-source';
 import { NodeListing } from '../../entities/NodeListing';
 import logger from '../../utils/logger';
-import { nodeCache } from '../../utils/nodeCache';
-import { getCurrentBlockHeight } from '../../thornodeClient';
+import { genericCache } from '../../utils/genericCache';
 import { populateNodesWithNetworkInfo } from '../helpers/populateNodes';
+import { NodesResponse } from '@xchainjs/xchain-thornode';
 
 export class NodeController {
 
   getNodes = async (req: Request, res: Response) => {
     try {
-
-      const officialNodeInfo: any[] = await nodeCache.getNodes();
-      const currentBlockHeight: number = await getCurrentBlockHeight();
+      const officialNodeInfo: NodesResponse = await genericCache.getNodes();
+      const currentBlockHeight: number = await genericCache.getBlockHeight();
+      const minimumBondInRune: number = await genericCache.getMinimumBond();
 
       const { page = 1, limit = 80, operatorAddress } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
@@ -32,7 +32,7 @@ export class NodeController {
         .getMany();
 
       return res.json({
-        data: populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight),
+        data: populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight, minimumBondInRune),
         pagination: {
           total,
           page: Number(page),
