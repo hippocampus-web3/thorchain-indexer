@@ -9,7 +9,7 @@ const nodesApi = new NodesApi(apiconfig)
 const networkApi = new NetworkApi(apiconfig)
 const mimirApi = new MimirApi(apiconfig)
 
-export async function getAllNodes(): Promise<NodesResponse> {  // TODO: User types
+export async function getAllNodes(): Promise<NodesResponse> {
   try {
     const response = await nodesApi.nodes()
     return response.data
