@@ -2,6 +2,9 @@ import { MidgardAction } from '../types';
 import logger from '../utils/logger';
 import { DatabaseManager } from '../db';
 import { genericCache } from '../utils/genericCache';
+import { announceNewNode, announceNewWhitelistRequest } from '../third-party-services/twitter';
+import { NodeListing } from '../entities/NodeListing';
+import { WhitelistRequest } from '../entities/WhitelistRequest';
 
 export interface ParserResult {
   [key: string]: any;
@@ -28,7 +31,7 @@ export const parsers = {
     
     const existingNode = await nodeListingRepo.findOne({ 
         where: { nodeAddress } 
-    });
+    }) as NodeListing | null;
 
     if (existingNode) {
         logger.info(`Updating existing node listing for address ${nodeAddress}`);
@@ -52,16 +55,25 @@ export const parsers = {
       throw new Error(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
     }
 
-    return {
-      nodeAddress,
-      operatorAddress,
-      minRune: Number(parts[4]),
-      maxRune: Number(parts[5]),
-      feePercentage: Number(parts[6]),
-      txId: action.in[0]?.txID,
-      height: action.height,
-      timestamp: new Date(Math.floor(Number(action.date) / 1000000))
-    };
+    const nodeListing = new NodeListing();
+    nodeListing.nodeAddress = nodeAddress;
+    nodeListing.operatorAddress = operatorAddress;
+    nodeListing.minRune = Number(parts[4]);
+    nodeListing.maxRune = Number(parts[5]);
+    nodeListing.feePercentage = Number(parts[6]);
+    nodeListing.txId = action.in[0]?.txID;
+    nodeListing.height = action.height;
+    nodeListing.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+
+    // Announce new node on Twitter
+    try {
+      await announceNewNode(nodeListing);
+      logger.info(`Successfully announced new node ${nodeAddress} on Twitter`);
+    } catch (error) {
+      logger.error(`Failed to announce new node ${nodeAddress} on Twitter:`, error);
+    }
+
+    return nodeListing;
   },
   whitelistRequest: async (action: MidgardAction, dbManager: DatabaseManager) => {
     const memo = action.metadata.send.memo;
@@ -80,21 +92,30 @@ export const parsers = {
     }
 
     const nodeListingRepo = dbManager.getRepository('node_listings');
-    const node = await nodeListingRepo.findOne({ where: { nodeAddress } });
+    const node = await nodeListingRepo.findOne({ where: { nodeAddress } }) as NodeListing | null;
     
     if (!node) {
         logger.warn(`Whitelist request rejected: Node ${nodeAddress} does not exist`);
         throw new Error(`Node ${nodeAddress} does not exist`);
     }
 
-    return {
-        nodeAddress,
-        userAddress,
-        intendedBondAmount: parseInt(parts[4]),
-        txId: action.in[0].txID,
-        height: action.height,
-        timestamp: new Date(Math.floor(Number(action.date) / 1000000))
-    };
+    const whitelistRequest = new WhitelistRequest();
+    whitelistRequest.nodeAddress = nodeAddress;
+    whitelistRequest.userAddress = userAddress;
+    whitelistRequest.intendedBondAmount = parseInt(parts[4]);
+    whitelistRequest.txId = action.in[0].txID;
+    whitelistRequest.height = action.height;
+    whitelistRequest.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+
+    // Announce new whitelist request on Twitter
+    try {
+      await announceNewWhitelistRequest(whitelistRequest);
+      logger.info(`Successfully announced new whitelist request for user ${userAddress} on Twitter`);
+    } catch (error) {
+      logger.error(`Failed to announce new whitelist request for user ${userAddress} on Twitter:`, error);
+    }
+
+    return whitelistRequest;
   } 
 };
 
