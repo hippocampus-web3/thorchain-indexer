@@ -83,7 +83,7 @@ export async function publishTweet(content: string): Promise<{ id: string, text:
  */
 export async function announceNewNode(node: NodeListing): Promise<{ id: string, text: string }> {
   const nodeUrl = `https://runebond.com/nodes/${node.nodeAddress}`;
-  const content = `🚀✨ New Node Listed on RUNEBond! ✨🚀\n\n` +
+  const content = `🚀 New Node Listed on RUNEBond!\n\n` +
     `🔗 Node: ${node.nodeAddress}\n` +
     `👤 Operator: ${node.operatorAddress}\n` +
     `💰 Fee: ${node.feePercentage}%\n` +
@@ -102,7 +102,7 @@ export async function announceNewNode(node: NodeListing): Promise<{ id: string, 
  */
 export async function announceNewWhitelistRequest(request: WhitelistRequest): Promise<{ id: string, text: string }> {
   const userUrl = `https://runebond.com/user-requests?user=${request.userAddress}`;
-  const content = `📝✨ New Whitelist Request on RUNEBond! ✨📝\n\n` +
+  const content = `📝 New Whitelist Request on RUNEBond!\n\n` +
     `🔗 Node: ${request.nodeAddress}\n` +
     `👤 User: ${request.userAddress}\n\n` +
     `🔍 View details: ${userUrl}\n\n`
