@@ -1,7 +1,12 @@
 import NodeCache from 'node-cache';
 import logger from './logger';
-import { getCurrentBlockHeight, getMinimumBondInRune, getAllNodes } from './thornodeClient';
-import { NodesResponse } from '@xchainjs/xchain-thornode';
+import { getCurrentBlockHeight, getMinimumBondInRune, getAllNodes, getNodeBondInfo } from './thornodeClient';
+import { NodeBondProvider, NodesResponse } from '@xchainjs/xchain-thornode';
+
+interface BondInfo {
+  bond: number;
+  isBondProvider: boolean;
+}
 
 class GenericCache {
   private static instance: GenericCache;
@@ -10,6 +15,7 @@ class GenericCache {
     BLOCK_HEIGHT: 3, // 3 seconds
     MINIMUM_BOND: 60, // 60 seconds
     NODES: 30, // 30 seconds
+    NODE_BOND_INFO: 2 * 60, // 30 seconds
   };
   private readonly DEFAULT_TTL = 30; // 30 seconds
 
@@ -54,6 +60,27 @@ class GenericCache {
     return this.get<NodesResponse>('nodes', getAllNodes, this.TTLs.NODES);
   }
 
+  public async getNodeBondInfo(nodeAddress: string): Promise<NodeBondProvider[]> {
+    const cacheKey = `nodeBond:${nodeAddress}`;
+    return this.get<NodeBondProvider[]>(
+      cacheKey,
+      () => getNodeBondInfo(nodeAddress),
+      this.TTLs.NODE_BOND_INFO
+    );
+  }
+
+  public async getBondInfo(nodeAddress: string, userAddress: string): Promise<BondInfo> {
+    const nodeBondInfo = await this.getNodeBondInfo(nodeAddress);
+    const provider = nodeBondInfo.find(
+      bp => bp.bond_address === userAddress
+    );
+
+    return {
+      isBondProvider: !!provider,
+      bond: provider ? Number(provider.bond) : 0
+    };
+  }
+
   public invalidateCache(): void {
     this.cache.flushAll();
     logger.info('Cache invalidated');
@@ -62,6 +89,12 @@ class GenericCache {
   public invalidateKey(key: string): void {
     this.cache.del(key);
     logger.info(`Cache invalidated for key: ${key}`);
+  }
+
+  public invalidateBondCacheForNode(nodeAddress: string): void {
+    const cacheKey = `nodeBond:${nodeAddress}`;
+    this.cache.del(cacheKey);
+    logger.info(`Bond info cache invalidated for node ${nodeAddress}`);
   }
 }
 

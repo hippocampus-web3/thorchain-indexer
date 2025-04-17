@@ -1,4 +1,4 @@
-import { Configuration, MimirApi, NetworkApi, NodesApi, NodesResponse } from "@xchainjs/xchain-thornode";
+import { Configuration, MimirApi, NetworkApi, NodeBondProvider, NodesApi, NodesResponse } from "@xchainjs/xchain-thornode";
 import logger from "./logger";
 
 const THORNODE_API_URL = 'https://thornode-v2.ninerealms.com/';
@@ -14,7 +14,6 @@ export async function getAllNodes(): Promise<NodesResponse> {
     const response = await nodesApi.nodes()
     return response.data
   } catch (error) {
-    console.log(error)
     logger.error('Failed to fetch all nodes:', error);
     throw new Error('Failed to retrieve all nodes');
   }
@@ -34,38 +33,18 @@ export async function getCurrentBlockHeight(): Promise<number> {
   }
 }
 
-export async function getBondInfoForUser(
-  nodeAddress: string,
-  userAddress: string
-): Promise<{ isBondProvider: boolean; status: string; bond: number }> {
-  if (!nodeAddress.startsWith('thor1') || !userAddress.startsWith('thor1')) {
-    throw new Error('Invalid THORChain address');
+
+export async function getNodeBondInfo(nodeAddress: string): Promise<NodeBondProvider[]> {
+  if (!nodeAddress.startsWith('thor1')) {
+    throw new Error('Invalid THORChain node address');
   }
 
   try {
     const response = await nodesApi.node(nodeAddress)
-    const bondProviders = response.data?.bond_providers?.providers ?? [];
-
-    const provider = bondProviders.find(
-      (bp) => bp.bond_address === userAddress
-    );
-
-    if (provider) {
-      return {
-        isBondProvider: true,
-        status: response.data?.status,
-        bond: Number(provider.bond)
-      };
-    }
-
-    return {
-      isBondProvider: false,
-      status: response.data?.status,
-      bond: 0
-    };
+    return response.data?.bond_providers?.providers || []
   } catch (error) {
     logger.error('Failed to fetch node data:', error);
-    throw new Error('Failed to retrieve bond info');
+    throw new Error('Failed to retrieve node bond info');
   }
 }
 
