@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { AppDataSourceApi } from "../../data-source";
 import { WhitelistRequest } from "../../entities/WhitelistRequest";
+import { WhitelistDTO, WhitelistRequestStatus } from "../types/WhitelistDTO";
 import logger from "../../utils/logger";
-import { bondCache } from "../../utils/bondCache";
 import { populateNodesWithNetworkInfo } from "../helpers/populateNodes";
 import { genericCache } from '../../utils/genericCache';
 
@@ -18,7 +18,6 @@ export class WhitelistController {
           .json({ error: "Node address or user address is required" });
       }
 
-      // TODO: Review corner case node provider with user requests to other nodes (makes sense ?)
       const queryBuilder = AppDataSourceApi.getRepository(WhitelistRequest)
         .createQueryBuilder("whitelist")
         .leftJoinAndSelect("whitelist.node", "node")
@@ -39,14 +38,12 @@ export class WhitelistController {
       const currentBlockHeight = await genericCache.getBlockHeight();
       const minimumBondInRune = await genericCache.getMinimumBond();
 
-      // TODO: Find optimal point between parallel requests and rate limits. Right now it's not parallel
-      const finalRequests = [];
-      for (const request of requests) {
-        const requestWithStatusAndBond = await this.computeWhitelistStatusAndBond(request);
-        const populatedNodes = populateNodesWithNetworkInfo([requestWithStatusAndBond.node], officialNodeInfo, currentBlockHeight, minimumBondInRune)
-        requestWithStatusAndBond.node = populatedNodes[0]
-        finalRequests.push(requestWithStatusAndBond);
-      }
+      // Populate nodes with network info
+      const finalRequests: WhitelistDTO[] = requests.map(request => {
+        const populatedNodes = populateNodesWithNetworkInfo([request.node], officialNodeInfo, currentBlockHeight, minimumBondInRune);
+        request.node = populatedNodes[0];
+        return request;
+      });
 
       return res.json({
         data: finalRequests,
@@ -84,27 +81,5 @@ export class WhitelistController {
       logger.error("Error getting whitelist request:", error);
       return res.status(500).json({ error: "Internal server error" });
     }
-  }
-
-  computeWhitelistStatusAndBond = async (request: WhitelistRequest) => {
-    const bondInfo = await bondCache.getBondInfo(
-      request.nodeAddress,
-      request.userAddress
-    );
-
-    let status: "pending" | "approved" | "rejected" | "bonded" = "pending";
-
-    if (bondInfo.isBondProvider) {
-      status = "approved";
-    }
-    if (bondInfo.isBondProvider && bondInfo.bond > 0) {
-      status = "bonded";
-    }
-
-    return {
-      ...request,
-      realBond: bondInfo.bond,
-      status
-    };
   }
 }

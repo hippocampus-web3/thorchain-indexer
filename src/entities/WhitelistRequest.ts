@@ -1,6 +1,8 @@
 import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
 import { NodeListing } from "./NodeListing";
 
+export type WhitelistRequestStatus = "pending" | "approved" | "rejected" | "bonded";
+
 @Entity("whitelist_requests")
 export class WhitelistRequest {
     @PrimaryGeneratedColumn()
@@ -15,6 +17,9 @@ export class WhitelistRequest {
     @Column({ name: "intendedBondAmount" })
     intendedBondAmount!: number;
 
+    @Column({ name: "realBond", type: "bigint", default: 0 })
+    realBond!: number;
+
     @Column({ name: "txId" })
     txId!: string;
 
@@ -23,6 +28,13 @@ export class WhitelistRequest {
 
     @Column()
     timestamp!: Date;
+
+    @Column({ 
+        type: "enum", 
+        enum: ["pending", "approved", "rejected", "bonded"],
+        default: "pending"
+    })
+    status!: WhitelistRequestStatus;
 
     @ManyToOne(() => NodeListing, nodeListing => nodeListing.whitelistRequests)
     @JoinColumn({ name: "nodeAddress", referencedColumnName: "nodeAddress" })

@@ -5,6 +5,7 @@ import compression from 'compression';
 import logger from '../utils/logger';
 import { AppDataSourceApi } from '../data-source';
 import dotenv from 'dotenv';
+import { WhitelistStatusUpdater } from '../services/whitelistStatusUpdater';
 
 dotenv.config();
 
@@ -34,6 +35,11 @@ const startServer = async () => {
       await AppDataSourceApi.initialize();
       logger.info('Conexión a la base de datos establecida');
     }
+    
+    // Start WhitelistStatusUpdater
+    const whitelistStatusUpdater = WhitelistStatusUpdater.getInstance();
+    whitelistStatusUpdater.start();
+    logger.info('WhitelistStatusUpdater started');
     
     app.listen(port, () => {
       logger.info(`API listin on ${port}`);

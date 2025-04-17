@@ -17,6 +17,7 @@ export type NodeDTO = {
     officialInfo: {
         currentFee: number;
         minimumBondInRune: number;
+        totalBond: number;
     };
     isHidden?: {
         hide: boolean,

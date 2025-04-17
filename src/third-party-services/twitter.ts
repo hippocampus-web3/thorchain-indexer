@@ -60,8 +60,6 @@ export async function publishTweet(content: string): Promise<{ id: string, text:
       { headers }
     );
     
-    console.log('Tweet published successfully:', response.data);
-    
     return {
       id: response.data.data.id,
       text: response.data.data.text

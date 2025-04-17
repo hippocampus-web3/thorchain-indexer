@@ -20,7 +20,8 @@ export function populateNodesWithNetworkInfo (nodes: NodeListing[], officialNode
       bondProvidersCount: officialNode?.bond_providers.providers.length,
       officialInfo: {
         currentFee: Number(officialNode?.bond_providers.node_operator_fee),
-        minimumBondInRune
+        minimumBondInRune,
+        totalBond: Number(officialNode?.total_bond)
       }
     }
 
