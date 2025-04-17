@@ -3,6 +3,7 @@ import OAuth from "oauth-1.0a";
 import crypto from "crypto";
 import { NodeListing } from "../entities/NodeListing";
 import { WhitelistRequest } from "../entities/WhitelistRequest";
+import { baseAmount, baseToAsset } from "@xchainjs/xchain-util";
 
 /**
  * Publishes a tweet using Twitter API v2 with OAuth 1.0a User Context
@@ -86,9 +87,9 @@ export async function announceNewNode(node: NodeListing): Promise<{ id: string, 
   const content = `🚀 New Node Listed on RUNEBond!\n\n` +
     `🔗 Node: ${node.nodeAddress}\n` +
     `👤 Operator: ${node.operatorAddress}\n` +
-    `💰 Fee: ${node.feePercentage}%\n` +
-    `📊 Min Rune: ${node.minRune}\n` +
-    `📈 Max Rune: ${node.maxRune}\n\n` +
+    `💰 Fee: ${node.feePercentage / 100}%\n` +
+    `📊 Min Rune: ${baseToAsset(baseAmount(node.minRune)).amount().toString()}\n` +
+    `📈 Max Rune: ${baseToAsset(baseAmount(node.maxRune)).amount().toString()}\n\n` +
     `🔍 View details: ${nodeUrl}\n\n`
 
   return publishTweet(content);
