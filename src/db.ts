@@ -3,6 +3,7 @@ import { IndexerState } from './entities/IndexerState';
 import { NodeListing } from './entities/NodeListing';
 import { WhitelistRequest } from './entities/WhitelistRequest';
 import logger from './utils/logger';
+import { ChatMessage } from './entities/ChatMessage';
 
 export class DatabaseManager {
 
@@ -32,6 +33,8 @@ export class DatabaseManager {
           return this.dataSource.getRepository(NodeListing);
         case 'whitelist_requests':
           return this.dataSource.getRepository(WhitelistRequest);
+        case 'chat_messages':
+          return this.dataSource.getRepository(ChatMessage);
         default:
           logger.error(`Repository not found for table: ${tableName}`);
           throw new Error(`No repository found for table: ${tableName}`);

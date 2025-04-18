@@ -4,6 +4,7 @@ import { TemplateLoader } from './loadTemplates';
 import { getParser } from './parsers';
 import { Template, MidgardAction } from '../types';
 import logger from '../utils/logger';
+import { checkTransactionAmount } from '../utils/checkTransactionAmount';
 
 export class Indexer {
   private midgardClient: MidgardClient;
@@ -60,25 +61,12 @@ export class Indexer {
     }
   }
 
-  private checkTransactionAmount(action: MidgardAction, minBaseAmount: number) {
-    let isValid = false
-    const baseAmount = action.in[0]?.coins.find(coin => coin.asset === 'THOR.RUNE')?.amount;
-    if (!baseAmount) {
-      isValid = false;
-    }
-    isValid = Number(baseAmount) >= minBaseAmount;
-    if (!isValid) {
-      logger.warn(`Skipping action ${action.in[0]?.txID}: insufficient amount. minBaseAmount ${minBaseAmount} baseAmount ${baseAmount}`);
-      throw new Error(`Skipping action ${action.in[0]?.txID}: insufficient amount`);
-    }
-  }
-
   private async processAction(action: MidgardAction, templates: Template[]) {
     for (const template of templates) {
       for (const prefix of template.prefix) {
         if (action.metadata.send.memo.startsWith(prefix)) {
           try {
-            this.checkTransactionAmount(action, template.minAmount)
+            checkTransactionAmount(action, template.minAmount)
             const parser = getParser(template.parser);
             const repository = this.dbManager.getRepository(template.table);
             const parsedData = await parser(action, this.dbManager);

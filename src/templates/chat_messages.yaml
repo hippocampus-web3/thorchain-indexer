@@ -2,11 +2,11 @@
 address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
 
 # Valid memo prefixes to process
-prefix: ["TB:LIST"]
+prefix: ["TB:MSG"]
 
 # Table name where data will be stored
-table: "node_listings"
+table: "chat_messages"
 
 # Parser function to use
-parser: "nodeListing"
-minAmount: 10000000
+parser: "chatMessage"
+minAmount: 10000000 

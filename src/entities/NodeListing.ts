@@ -1,5 +1,6 @@
 import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
 import { WhitelistRequest } from "./WhitelistRequest";
+import { ChatMessage } from "./ChatMessage";
 
 @Entity("node_listings")
 export class NodeListing {
@@ -32,4 +33,7 @@ export class NodeListing {
 
     @OneToMany(() => WhitelistRequest, whitelistRequest => whitelistRequest.node)
     whitelistRequests!: WhitelistRequest[];
+
+    @OneToMany(() => ChatMessage, chatMessage => chatMessage.node)
+    chatMessages!: ChatMessage[];
 } 

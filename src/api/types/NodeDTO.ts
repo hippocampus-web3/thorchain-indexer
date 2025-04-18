@@ -1,3 +1,4 @@
+import { ChatMessage } from "@/entities/ChatMessage";
 import { WhitelistRequest } from "@/entities/WhitelistRequest";
 
 export type NodeDTO = {
@@ -23,5 +24,6 @@ export type NodeDTO = {
         hide: boolean,
         reasons: string[] | null
     }
-    whitelistRequests: WhitelistRequest[]
+    whitelistRequests: WhitelistRequest[],
+    chatMessages: ChatMessage[]
 }

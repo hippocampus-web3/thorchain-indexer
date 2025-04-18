@@ -2,12 +2,4 @@ table: whitelist_requests
 address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
 prefix: ["TB:WHT"]
 parser: whitelistRequest
-minAmount: 10000000
-columns:
-  id: int
-  nodeAddress: string
-  userAddress: string
-  intendedBondAmount: int
-  txId: string
-  height: int
-  timestamp: timestamp 
+minAmount: 10000000 

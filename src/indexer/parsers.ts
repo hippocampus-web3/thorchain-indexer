@@ -5,10 +5,49 @@ import { genericCache } from '../utils/genericCache';
 import { announceNewNode, announceNewWhitelistRequest } from '../third-party-services/twitter';
 import { NodeListing } from '../entities/NodeListing';
 import { WhitelistRequest } from '../entities/WhitelistRequest';
+import { ChatMessage } from '../entities/ChatMessage';
+import xss from 'xss';
+import { checkTransactionAmount } from '../utils/checkTransactionAmount';
+
+const CHAT_COST_PER_MESSAGE_USERS = 100000000
 
 export interface ParserResult {
   [key: string]: any;
 }
+
+const sanitizeString = (str: string): string => {
+  if (!str) return '';
+  
+  let sanitized = str.trim();
+  
+  sanitized = sanitized
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, '')
+    .replace(/\s+/g, ' ');
+  
+  sanitized = xss(sanitized, {
+    whiteList: {},
+    stripIgnoreTag: true,
+    stripIgnoreTagBody: ['script'],
+    allowCommentTag: false,
+    css: false
+  });
+  
+  return sanitized;
+};
+
+const sanitizeNumber = (str: string): number => {
+  if (!str) return 0;
+  
+  const cleaned = str.replace(/[^\d.-]/g, '');
+  
+  const num = Number(cleaned);
+  
+  if (isNaN(num)) {
+    throw new Error(`Invalid number: ${str}`);
+  }
+  
+  return num;
+};
 
 export const parsers = {
   nodeListing: async (action: MidgardAction, dbManager: DatabaseManager): Promise<ParserResult> => {
@@ -19,12 +58,24 @@ export const parsers = {
       throw new Error(`Invalid memo format for node listing: ${memo}`);
     }
 
-    const nodeAddress = parts[2]
-    const operatorAddress = parts[3]
+    const nodeAddress = sanitizeString(parts[2]);
+    const operatorAddress = sanitizeString(parts[3]);
 
     if (operatorAddress !== action.in[0]?.address) {
       logger.warn(`Node list request rejected: Impersonated node operator ${operatorAddress}`);
       throw new Error(`Impersonated node operator ${nodeAddress}`);
+    }
+
+    const minRune = sanitizeNumber(parts[4]);
+    const maxRune = sanitizeNumber(parts[5]);
+    const feePercentage = sanitizeNumber(parts[6]);
+
+    if (maxRune < minRune) {
+      throw new Error(`maxRune (${maxRune}) must be greater than or equal to minRune (${minRune})`);
+    }
+
+    if (feePercentage < 0 || feePercentage > 10000) {
+      throw new Error(`feePercentage (${feePercentage}) must be between 0 and 100`);
     }
 
     const nodeListingRepo = dbManager.getRepository('node_listings');
@@ -37,10 +88,10 @@ export const parsers = {
         logger.info(`Updating existing node listing for address ${nodeAddress}`);
         Object.assign(existingNode, {
             operatorAddress,
-            minRune: Number(parts[4]),
-            maxRune: Number(parts[5]),
-            feePercentage: Number(parts[6]),
-            txId: action.in[0].txID,
+            minRune,
+            maxRune,
+            feePercentage,
+            txId: sanitizeString(action.in[0].txID),
             height: action.height,
             timestamp: new Date(Math.floor(Number(action.date) / 1000000))
         });
@@ -58,14 +109,13 @@ export const parsers = {
     const nodeListing = new NodeListing();
     nodeListing.nodeAddress = nodeAddress;
     nodeListing.operatorAddress = operatorAddress;
-    nodeListing.minRune = Number(parts[4]);
-    nodeListing.maxRune = Number(parts[5]);
-    nodeListing.feePercentage = Number(parts[6]);
-    nodeListing.txId = action.in[0]?.txID;
+    nodeListing.minRune = minRune;
+    nodeListing.maxRune = maxRune;
+    nodeListing.feePercentage = feePercentage;
+    nodeListing.txId = sanitizeString(action.in[0]?.txID);
     nodeListing.height = action.height;
     nodeListing.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
 
-    // Announce new node on Twitter
     try {
       await announceNewNode(nodeListing);
       logger.info(`Successfully announced new node ${nodeAddress} on Twitter`);
@@ -83,13 +133,15 @@ export const parsers = {
       throw new Error(`Invalid memo format for node listing: ${memo}`);
     }
 
-    const userAddress = parts[3]
-    const nodeAddress = parts[2]
+    const userAddress = sanitizeString(parts[3]);
+    const nodeAddress = sanitizeString(parts[2]);
 
     if (userAddress !== action.in[0]?.address) {
         logger.warn(`Whitelist request rejected: Impersonated address ${userAddress}`);
         throw new Error(`Impersonated address ${userAddress}`);
     }
+
+    const intendedBondAmount = sanitizeNumber(parts[4]);
 
     const nodeListingRepo = dbManager.getRepository('node_listings');
     const node = await nodeListingRepo.findOne({ where: { nodeAddress } }) as NodeListing | null;
@@ -102,12 +154,11 @@ export const parsers = {
     const whitelistRequest = new WhitelistRequest();
     whitelistRequest.nodeAddress = nodeAddress;
     whitelistRequest.userAddress = userAddress;
-    whitelistRequest.intendedBondAmount = parseInt(parts[4]);
-    whitelistRequest.txId = action.in[0].txID;
+    whitelistRequest.intendedBondAmount = intendedBondAmount;
+    whitelistRequest.txId = sanitizeString(action.in[0].txID);
     whitelistRequest.height = action.height;
     whitelistRequest.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
 
-    // Announce new whitelist request on Twitter
     try {
       await announceNewWhitelistRequest(whitelistRequest);
       logger.info(`Successfully announced new whitelist request for user ${userAddress} on Twitter`);
@@ -116,6 +167,81 @@ export const parsers = {
     }
 
     return whitelistRequest;
+  },
+  chatMessage: async (action: MidgardAction, dbManager: DatabaseManager) => {
+    const memo = action.metadata.send.memo;
+
+    const parts = memo.split(':');
+    if (parts.length !== 4) {
+      throw new Error(`Invalid memo format for chat message: ${memo}`);
+    }
+
+    const nodeAddress = sanitizeString(parts[2]);
+    const base64Message = parts[3];
+    const userAddress = sanitizeString(action.in[0]?.address || '');
+
+    if (!userAddress) {
+      throw new Error('No sender address found in transaction');
+    }
+
+    // Verify node exists and get node info from Thornode
+    const nodeListingRepo = dbManager.getRepository('node_listings');
+    const node = await nodeListingRepo.findOne({ where: { nodeAddress } }) as NodeListing | null;
+    
+    if (!node) {
+      logger.warn(`Chat message rejected: Node ${nodeAddress} does not exist`);
+      throw new Error(`Node ${nodeAddress} does not exist`);
+    }
+
+    // Get node info from Thornode for the specific block
+    const nodeInfo = await genericCache.getNodes(action.height);
+    const nodeDetails = nodeInfo.find(n => n.node_address === nodeAddress);
+
+    if (!nodeDetails) {
+      logger.warn(`Chat message rejected: Could not fetch node details from Thornode for ${nodeAddress}`);
+      throw new Error(`Could not fetch node details from Thornode`);
+    }
+
+    let role: 'BP' | 'NO' | 'USER' = 'USER';
+
+    if (userAddress === nodeDetails.node_operator_address) {
+      role = 'NO';
+    } else if (nodeDetails?.bond_providers?.providers) {
+      const isBondProvider = nodeDetails.bond_providers.providers.some(bp => 
+        bp.bond_address === userAddress && 
+        Number(bp.bond) > 0
+      );
+      if (isBondProvider) {
+        role = 'BP';
+      }
+    }
+
+    if (role === 'USER') {
+      logger.warn(`Chat message rejected: User ${userAddress} is not a bond provider or node operator at block height ${action.height}`);
+      checkTransactionAmount(action, CHAT_COST_PER_MESSAGE_USERS)
+    }
+
+    // Decode base64 message
+    let message: string;
+    try {
+      message = Buffer.from(base64Message, 'base64').toString('utf-8');
+    } catch (error) {
+      logger.warn(`Failed to decode base64 message: ${base64Message}`);
+      throw new Error('Invalid base64 message format');
+    }
+
+    message = sanitizeString(message);
+
+    const chatMessage = new ChatMessage();
+    chatMessage.role = role;
+    chatMessage.nodeAddress = nodeAddress;
+    chatMessage.userAddress = userAddress;
+    chatMessage.message = message;
+    chatMessage.txId = sanitizeString(action.in[0].txID);
+    chatMessage.height = action.height;
+    chatMessage.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+
+    return chatMessage;
   } 
 };
 

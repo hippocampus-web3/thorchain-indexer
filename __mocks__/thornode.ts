@@ -4,10 +4,11 @@ export default {
   restore: mock.restore,
   init: () => {
     // Mock GET https://thornode.ninerealms.com/thorchain/nodes
-    mock.onGet(/\/thorchain\/nodes$/).reply(() => {
+    mock.onGet(/\/thorchain\/nodes(\?.*)?$/).reply(() => {
       const resp = require('./responses/get-all-nodes.json');
       return [200, resp];
     });
+    
 
     // Mock GET https://thornode.ninerealms.com/thorchain/lastblock
     mock.onGet(/\/thorchain\/lastblock$/).reply(() => {

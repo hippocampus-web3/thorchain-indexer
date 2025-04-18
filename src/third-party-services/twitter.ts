@@ -12,6 +12,10 @@ import { baseAmount, baseToAsset } from "@xchainjs/xchain-util";
  * @returns The ID of the published tweet and its text
  */
 export async function publishTweet(content: string): Promise<{ id: string, text: string }> {
+
+  if (process.env.TWITTER_NOTIFICATIONS_DISABLED) {
+    return { id: '-1', text: '' };
+  }
   // Check if all required environment variables are set
   if (!process.env.TWITTER_API_KEY || !process.env.TWITTER_API_SECRET || 
       !process.env.TWITTER_ACCESS_TOKEN || !process.env.TWITTER_ACCESS_SECRET) {
