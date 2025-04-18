@@ -7,8 +7,8 @@ import { WhitelistRequestStatus } from '../api/types/WhitelistDTO';
 export class WhitelistStatusUpdater {
   private static instance: WhitelistStatusUpdater;
   private isRunning: boolean = false;
-  private updateInterval: number = 2 * 60 * 1000; // 2 minutes
-  private readonly DELAY_BETWEEN_UPDATES = 200; // 200ms delay between updates
+  private updateInterval: number = 3 * 60 * 1000; // 2 minutes
+  private readonly DELAY_BETWEEN_UPDATES = 500; // 200ms delay between updates
 
   private constructor() {}
 
