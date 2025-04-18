@@ -1,4 +1,4 @@
-import { AppDataSourceApi } from '../data-source';
+import { AppDataSourceApi } from '../data-source-api';
 import { WhitelistRequest } from '../entities/WhitelistRequest';
 import { genericCache } from '../utils/genericCache';
 import logger from '../utils/logger';
@@ -76,7 +76,7 @@ export class WhitelistStatusUpdater {
       }
       
       // Add delay between updates
-      await new Promise(resolve => setTimeout(resolve, this.DELAY_BETWEEN_UPDATES));
+      await new Promise(resolve => setTimeout(resolve, this.DELAY_BETWEEN_UPDATES)); // TODO: Remove delay (rate limits)
     }
     
     logger.info('Finished updating all whitelist requests');

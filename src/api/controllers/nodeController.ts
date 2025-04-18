@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AppDataSourceApi } from '../../data-source';
+import { AppDataSourceApi } from '../../data-source-api';
 import { NodeListing } from '../../entities/NodeListing';
 import { WhitelistRequest } from '../../entities/WhitelistRequest';
 import logger from '../../utils/logger';

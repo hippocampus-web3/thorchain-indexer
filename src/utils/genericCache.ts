@@ -1,7 +1,7 @@
 import NodeCache from 'node-cache';
 import logger from './logger';
-import { getCurrentBlockHeight, getMinimumBondInRune, getAllNodes, getNodeBondInfo } from './thornodeClient';
-import { NodeBondProvider, NodesResponse } from '@xchainjs/xchain-thornode';
+import { getCurrentBlockHeight, getMinimumBondInRune, getAllNodes } from './thornodeClient';
+import { NodesResponse } from '@xchainjs/xchain-thornode';
 
 interface BondInfo {
   bond: number;
@@ -13,9 +13,9 @@ class GenericCache {
   private cache: NodeCache;
   private readonly TTLs = {
     BLOCK_HEIGHT: 3, // 3 seconds
-    MINIMUM_BOND: 60, // 60 seconds
-    NODES: 30, // 30 seconds
-    NODE_BOND_INFO: 2 * 60, // 30 seconds
+    MINIMUM_BOND: 60 * 60, // 1 hour
+    NODES: 60, // 60 seconds
+    NODE_BOND_INFO: 2 * 60, // 120 seconds
   };
   private readonly DEFAULT_TTL = 30; // 30 seconds
 
@@ -56,22 +56,18 @@ class GenericCache {
     return this.get<number>('minimumBond', getMinimumBondInRune, this.TTLs.MINIMUM_BOND);
   }
 
-  public async getNodes(): Promise<NodesResponse> {
-    return this.get<NodesResponse>('nodes', getAllNodes, this.TTLs.NODES);
-  }
-
-  public async getNodeBondInfo(nodeAddress: string): Promise<NodeBondProvider[]> {
-    const cacheKey = `nodeBond:${nodeAddress}`;
-    return this.get<NodeBondProvider[]>(
-      cacheKey,
-      () => getNodeBondInfo(nodeAddress),
-      this.TTLs.NODE_BOND_INFO
-    );
+  public async getNodes(height?: number): Promise<NodesResponse> {
+    const cacheKey = height ? `nodes:${height}` : 'nodes';
+    return this.get<NodesResponse>(cacheKey, () => getAllNodes(height), this.TTLs.NODES);
   }
 
   public async getBondInfo(nodeAddress: string, userAddress: string): Promise<BondInfo> {
-    const nodeBondInfo = await this.getNodeBondInfo(nodeAddress);
-    const provider = nodeBondInfo.find(
+    const nodes = await this.getNodes();
+    const node = nodes.find(on => on.node_address === nodeAddress)
+    if (!node) {
+      throw new Error(`Node ${nodeAddress} not found`);
+    }
+    const provider = node?.bond_providers?.providers.find(
       bp => bp.bond_address === userAddress
     );
 

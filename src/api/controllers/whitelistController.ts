@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
-import { AppDataSourceApi } from "../../data-source";
+import { AppDataSourceApi } from "../../data-source-api";
 import { WhitelistRequest } from "../../entities/WhitelistRequest";
-import { WhitelistDTO, WhitelistRequestStatus } from "../types/WhitelistDTO";
+import { WhitelistDTO } from "../types/WhitelistDTO";
 import logger from "../../utils/logger";
 import { populateNodesWithNetworkInfo } from "../helpers/populateNodes";
 import { genericCache } from '../../utils/genericCache';

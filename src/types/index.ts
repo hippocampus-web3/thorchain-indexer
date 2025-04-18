@@ -4,7 +4,6 @@ export const TemplateSchema = z.object({
   address: z.string(),
   prefix: z.array(z.string()),
   table: z.string(),
-  columns: z.record(z.string(), z.string()),
   parser: z.string(),
   minAmount: z.number()
 });
