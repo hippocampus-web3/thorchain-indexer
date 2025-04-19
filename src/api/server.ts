@@ -7,6 +7,7 @@ import { AppDataSourceApi } from '../data-source-api';
 import dotenv from 'dotenv';
 import { WhitelistStatusUpdater } from '../services/whitelistStatusUpdater';
 import chatRoutes from './routes/chatRoutes';
+import statsRoutes from './routes/statsRoutes';
 
 dotenv.config();
 
@@ -21,6 +22,7 @@ app.use(express.json());
 app.use('/api/nodes', require('./routes/nodeRoutes').default);
 app.use('/api/whitelist', require('./routes/whitelistRoutes').default);
 app.use('/api/chat', chatRoutes);
+app.use('/api/stats', statsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
