@@ -31,4 +31,10 @@ export class MidgardClient {
     const response = await axios.get<MidgardResponse>(url, { params });
     return response.data.actions;
   }
+
+  async getNetworkInfo() {
+    const url = `${this.baseUrl}/v2/network`;
+    const response = await axios.get(url);
+    return response.data;
+  }
 }

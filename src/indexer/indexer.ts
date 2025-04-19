@@ -1,4 +1,4 @@
-import { MidgardClient } from './midgardClient';
+import { MidgardClient } from '../utils/midgardClient';
 import { DatabaseManager } from '../db';
 import { TemplateLoader } from './loadTemplates';
 import { getParser } from './parsers';

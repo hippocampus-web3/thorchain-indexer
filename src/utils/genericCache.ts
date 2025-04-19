@@ -2,6 +2,7 @@ import NodeCache from 'node-cache';
 import logger from './logger';
 import { getCurrentBlockHeight, getMinimumBondInRune, getAllNodes } from './thornodeClient';
 import { NodesResponse } from '@xchainjs/xchain-thornode';
+import { MidgardClient } from './midgardClient';
 
 interface BondInfo {
   bond: number;
@@ -16,11 +17,14 @@ class GenericCache {
     MINIMUM_BOND: 60 * 60, // 1 hour
     NODES: 60, // 60 seconds
     NODE_BOND_INFO: 2 * 60, // 120 seconds
+    NETWORK_INFO: 30 * 60, // 30 minutes
   };
   private readonly DEFAULT_TTL = 30; // 30 seconds
+  private midgardClient: MidgardClient;
 
   private constructor() {
     this.cache = new NodeCache();
+    this.midgardClient = new MidgardClient();
   }
 
   public static getInstance(): GenericCache {
@@ -75,6 +79,10 @@ class GenericCache {
       isBondProvider: !!provider,
       bond: provider ? Number(provider.bond) : 0
     };
+  }
+
+  public async getNetworkInfo() {
+    return this.get('networkInfo', () => this.midgardClient.getNetworkInfo(), this.TTLs.NETWORK_INFO);
   }
 
   public invalidateCache(): void {
