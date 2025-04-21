@@ -7,8 +7,9 @@ import { WhitelistRequestStatus } from '../api/types/WhitelistDTO';
 export class WhitelistStatusUpdater {
   private static instance: WhitelistStatusUpdater;
   private isRunning: boolean = false;
-  private updateInterval: number = 3 * 60 * 1000; // 2 minutes
-  private readonly DELAY_BETWEEN_UPDATES = 500; // 200ms delay between updates
+  private updateInterval: number = 30 * 1000; // 30 secs
+  private readonly DELAY_BETWEEN_UPDATES = 500;
+  private readonly REJECTION_THRESHOLD_DAYS = 3;
 
   private constructor() {}
 
@@ -55,9 +56,15 @@ export class WhitelistStatusUpdater {
     
     for (const request of requests) {
       try {
-        const bondInfo = await genericCache.getBondInfo(request.nodeAddress, request.userAddress); // TODO: Update all users from a node at once to reduce API calls
+        // Skip if request is already rejected
+        if (request.status === 'rejected') {
+          continue;
+        }
+
+        const bondInfo = await genericCache.getBondInfo(request.nodeAddress, request.userAddress);
         
-        let newStatus: WhitelistRequestStatus = "pending";
+        // First check if request can be approved or bonded
+        let newStatus: WhitelistRequestStatus = request.status;
         if (bondInfo.isBondProvider) {
           newStatus = "approved";
         }
@@ -65,18 +72,31 @@ export class WhitelistStatusUpdater {
           newStatus = "bonded";
         }
 
-        if (request.status !== newStatus || request.realBond !== bondInfo.bond) {
+        if (request.status !== newStatus || Number(request.realBond) !== Number(bondInfo.bond)) {
           request.status = newStatus;
           request.realBond = bondInfo.bond;
           await AppDataSourceApi.getRepository(WhitelistRequest).save(request);
           logger.info(`Updated whitelist request ${request.id} status to ${newStatus} and realBond to ${bondInfo.bond}`);
+          continue;
+        }
+
+        // Only check for rejection if request is still pending
+        if (request.status === 'pending') {
+          const now = new Date();
+          const requestAgeInDays = (now.getTime() - request.timestamp.getTime()) / (1000 * 60 * 60 * 24);
+          
+          if (requestAgeInDays > this.REJECTION_THRESHOLD_DAYS) {
+            request.status = 'rejected';
+            await AppDataSourceApi.getRepository(WhitelistRequest).save(request);
+            logger.info(`Request ${request.id} automatically rejected after ${requestAgeInDays.toFixed(2)} days`);
+          }
         }
       } catch (error) {
         logger.error(`Error updating whitelist request ${request.id}:`, error);
       }
       
       // Add delay between updates
-      await new Promise(resolve => setTimeout(resolve, this.DELAY_BETWEEN_UPDATES)); // TODO: Remove delay (rate limits)
+      await new Promise(resolve => setTimeout(resolve, this.DELAY_BETWEEN_UPDATES));
     }
     
     logger.info('Finished updating all whitelist requests');

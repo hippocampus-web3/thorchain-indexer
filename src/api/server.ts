@@ -43,7 +43,6 @@ const startServer = async () => {
     // Start WhitelistStatusUpdater
     const whitelistStatusUpdater = WhitelistStatusUpdater.getInstance();
     whitelistStatusUpdater.start();
-    logger.info('WhitelistStatusUpdater started');
     
     app.listen(port, () => {
       logger.info(`API listin on ${port}`);

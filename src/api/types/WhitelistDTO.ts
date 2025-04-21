@@ -1,6 +1,6 @@
 import { NodeListing } from "../../entities/NodeListing";
 
-export type WhitelistRequestStatus = "pending" | "approved" | "rejected" | "bonded";
+export type WhitelistRequestStatus = 'pending' | 'approved' | 'bonded' | 'rejected';
 
 export interface WhitelistDTO {
     id: number;
