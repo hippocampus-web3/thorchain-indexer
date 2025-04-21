@@ -425,6 +425,82 @@ describe('Parser Security Tests', () => {
         .rejects
         .toThrow('Node thor1nonexistentnode does not exist');
     });
+
+    it('should update existing whitelist request', async () => {
+      const nodeRepository = dbManager.getRepository('node_listings')
+      // First create a valid node
+      await nodeRepository.save({
+        nodeAddress: 'thor1realnode',
+        operatorAddress: 'thor1realoperator',
+        minRune: 1000000,
+        maxRune: 2000000,
+        feePercentage: 100,
+        txId: "0x",
+        height: 1000,
+        timestamp: new Date("2025-01-15T06:56:07.890Z")
+      });
+
+      const whitelistRepo = dbManager.getRepository('whitelist_requests');
+      // Create initial whitelist request
+      await whitelistRepo.save({
+        nodeAddress: 'thor1realnode',
+        userAddress: 'thor1realUser',
+        intendedBondAmount: 1000000,
+        txId: "old-tx-id",
+        height: 1000,
+        timestamp: new Date("2025-01-15T06:56:07.890Z"),
+        status: 'pending'
+      });
+
+      const existingRequest = await whitelistRepo.findOne({
+        where: {
+          nodeAddress: 'thor1realnode',
+          userAddress: 'thor1realUser'
+        }
+      });
+
+      expect(existingRequest?.id).toBe(1);
+
+      const updateAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:WHT:thor1realnode:thor1realUser:2000000' // Different bond amount
+          }
+        },
+        in: [{
+          address: 'thor1realUser',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '2000000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '2000000' }]
+        }],
+        height: 2000,
+        date: '1234567890000000'
+      };
+
+      const result = await getParser('whitelistRequest')(updateAction, dbManager);
+      expect(result).toEqual({
+        id: 1,
+        nodeAddress: 'thor1realnode',
+        userAddress: 'thor1realUser',
+        intendedBondAmount: 2000000,
+        txId: 'new-tx-id',
+        height: 2000,
+        timestamp: new Date("1970-01-15T06:56:07.890Z"),
+        realBond: "0",
+        status: 'pending'
+      });
+
+      // Verify only one record exists
+      const allRequests = await whitelistRepo.find();
+      expect(allRequests.length).toBe(1);
+    });
   });
 
   describe('Chat Message Parser Security Tests', () => {

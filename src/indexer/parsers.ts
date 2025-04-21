@@ -151,6 +151,27 @@ export const parsers = {
         throw new Error(`Node ${nodeAddress} does not exist`);
     }
 
+    // Check for existing whitelist request
+    const whitelistRepo = dbManager.getRepository('whitelist_requests');
+    const existingRequest = await whitelistRepo.findOne({
+      where: {
+        nodeAddress,
+        userAddress
+      }
+    }) as WhitelistRequest | null;
+
+    if (existingRequest) {
+      logger.info(`Updating existing whitelist request for user ${userAddress} to node ${nodeAddress}`);
+      Object.assign(existingRequest, {
+        intendedBondAmount,
+        txId: sanitizeString(action.in[0].txID),
+        height: action.height,
+        timestamp: new Date(Math.floor(Number(action.date) / 1000000)),
+        status: 'pending' // Reset status when updating
+      });
+      return existingRequest;
+    }
+
     const whitelistRequest = new WhitelistRequest();
     whitelistRequest.nodeAddress = nodeAddress;
     whitelistRequest.userAddress = userAddress;

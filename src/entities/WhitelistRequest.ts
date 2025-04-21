@@ -1,9 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, Unique } from "typeorm";
 import { NodeListing } from "./NodeListing";
 
 export type WhitelistRequestStatus = "pending" | "approved" | "rejected" | "bonded";
 
 @Entity("whitelist_requests")
+@Unique("UQ_WHITELIST_REQUEST", ["nodeAddress", "userAddress"])
 export class WhitelistRequest {
     @PrimaryGeneratedColumn()
     id!: number;

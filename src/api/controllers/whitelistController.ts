@@ -9,22 +9,66 @@ import { genericCache } from '../../utils/genericCache';
 export class WhitelistController {
   getWhitelistRequests =  async (req: Request, res: Response) => {
     try {
-      const { page = 1, limit = 80, address } = req.query;
+      const { page = 1, limit = 80, address, nodeAddress } = req.query;
       const skip = (Number(page) - 1) * Number(limit);
-
-      if (!address) {
-        return res
-          .status(400)
-          .json({ error: "Node address or user address is required" });
-      }
 
       const queryBuilder = AppDataSourceApi.getRepository(WhitelistRequest)
         .createQueryBuilder("whitelist")
-        .leftJoinAndSelect("whitelist.node", "node")
-        .where(
-          "(node.operatorAddress = :address OR whitelist.userAddress = :address)",
-          { address }
+        .leftJoinAndSelect("whitelist.node", "node");
+
+      // If nodeAddress is provided, search for specific request
+      if (nodeAddress) {
+        if (!address) {
+          return res.status(400).json({ 
+            error: "User address is required when searching by node address" 
+          });
+        }
+
+        const request = await queryBuilder
+          .where("whitelist.userAddress = :address", { address })
+          .andWhere("whitelist.nodeAddress = :nodeAddress", { nodeAddress })
+          .getOne();
+
+        if (!request) {
+          return res.status(404).json({ error: "Whitelist request not found" });
+        }
+
+        // Get network info for the node
+        const officialNodeInfo = await genericCache.getNodes();
+        const currentBlockHeight = await genericCache.getBlockHeight();
+        const minimumBondInRune = await genericCache.getMinimumBond();
+
+        // Populate node with network info
+        const populatedNodes = populateNodesWithNetworkInfo(
+          [request.node], 
+          officialNodeInfo, 
+          currentBlockHeight, 
+          minimumBondInRune
         );
+        request.node = populatedNodes[0];
+
+        return res.json({
+          data: [request],
+          pagination: {
+            total: 1,
+            page: 1,
+            limit: 1,
+            totalPages: 1,
+          },
+        });
+      }
+
+      // Otherwise, handle general query with address filter
+      if (!address) {
+        return res
+          .status(400)
+          .json({ error: "User address is required" });
+      }
+
+      queryBuilder.where(
+        "(node.operatorAddress = :address OR whitelist.userAddress = :address)",
+        { address }
+      );
 
       const total = await queryBuilder.getCount();
 
