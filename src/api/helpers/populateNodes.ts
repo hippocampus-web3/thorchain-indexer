@@ -32,7 +32,7 @@ export function populateNodesWithNetworkInfo (nodes: NodeListing[], officialNode
     }
 
     populateNode.isHidden = shouldBeHidden(populateNode, officialNode, minimumBondInRune)
-    populateNode.isYieldiGuarded = shouldBeYieldGuarded(officialNode)
+    populateNode.isYieldGuarded = shouldBeYieldGuarded(officialNode)
 
     return populateNode
   });

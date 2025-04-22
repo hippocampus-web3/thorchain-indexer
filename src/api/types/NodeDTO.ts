@@ -24,7 +24,7 @@ export type NodeDTO = {
         hide: boolean,
         reasons: string[] | null
     }
-    isYieldiGuarded?: {
+    isYieldGuarded?: {
         hide: boolean,
         reasons: string[] | null
     }
