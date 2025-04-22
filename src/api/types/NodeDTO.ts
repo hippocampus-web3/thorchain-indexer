@@ -24,6 +24,10 @@ export type NodeDTO = {
         hide: boolean,
         reasons: string[] | null
     }
+    isYieldGuarded?: {
+        hide: boolean,
+        reasons: string[] | null
+    }
     whitelistRequests: WhitelistRequest[],
     chatMessages: ChatMessage[]
 }

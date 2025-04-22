@@ -32,31 +32,8 @@ export class NodeController {
         .take(Number(limit))
         .getMany();
 
-      // Get all bonded whitelist requests for these nodes
-      const nodeAddresses = nodes.map(node => node.nodeAddress);
-      const whitelistRequests = await AppDataSourceApi.getRepository(WhitelistRequest)
-        .createQueryBuilder('request')
-        .where('request.nodeAddress IN (:...nodeAddresses)', { nodeAddresses })
-        .andWhere('request.status = :status', { status: 'bonded' })
-        .getMany();
-
-      // Calculate total delegated amount for each node
-      const delegatedAmounts = whitelistRequests.reduce((acc, request) => {
-        if (!acc[request.nodeAddress]) {
-          acc[request.nodeAddress] = 0;
-        }
-        acc[request.nodeAddress] = Number(acc[request.nodeAddress]) + Number(request.realBond);
-        return acc;
-      }, {} as Record<string, number>);
-      
-      // Adjust maxRune for each node
-      const adjustedNodes = nodes.map(node => ({
-        ...node,
-        maxRune: node.maxRune - (delegatedAmounts[node.nodeAddress] || 0)
-      }));
-
       return res.json({
-        data: populateNodesWithNetworkInfo(adjustedNodes, officialNodeInfo, currentBlockHeight, minimumBondInRune),
+        data: populateNodesWithNetworkInfo(nodes, officialNodeInfo, currentBlockHeight, minimumBondInRune),
         pagination: {
           total,
           page: Number(page),
@@ -67,41 +44,6 @@ export class NodeController {
     } catch (error) {
       logger.error('Error getting nodes:', error);
       return res.status(500).json({ error: 'Error getting nodes' });
-    }
-  }
-
-  getNodeByAddress = async (req: Request, res: Response) => {
-    try {
-      const { address } = req.params;
-      const node = await AppDataSourceApi.getRepository(NodeListing).findOne({
-        where: { nodeAddress: address }
-      });
-
-      if (!node) {
-        return res.status(404).json({ error: 'Node not found' });
-      }
-
-      // Get bonded whitelist requests for this node
-      const whitelistRequests = await AppDataSourceApi.getRepository(WhitelistRequest)
-        .createQueryBuilder('request')
-        .where('request.nodeAddress = :address', { address })
-        .andWhere('request.status = :status', { status: 'bonded' })
-        .getMany();
-
-      // Calculate total delegated amount
-      const totalDelegated = whitelistRequests.reduce((sum, request) => 
-        sum + request.realBond, 0);
-
-      // Adjust maxRune
-      const adjustedNode = {
-        ...node,
-        maxRune: node.maxRune - totalDelegated
-      };
-
-      return res.json(adjustedNode);
-    } catch (error) {
-      logger.error('Error getting node:', error);
-      return res.status(500).json({ error: 'Internal server error' });
     }
   }
 } 

@@ -5,7 +5,8 @@ export const TemplateSchema = z.object({
   prefix: z.array(z.string()),
   table: z.string(),
   parser: z.string(),
-  minAmount: z.number()
+  minAmount: z.number(),
+  blockHeight: z.number().optional()
 });
 
 export type Template = z.infer<typeof TemplateSchema>;
