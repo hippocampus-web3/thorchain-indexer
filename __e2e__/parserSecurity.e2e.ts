@@ -21,7 +21,7 @@ describe('Parser Security E2E Tests', () => {
         walletIndex: 0,
         recipient,
         amount: minAmount,
-        memo: `TB:V2:LIST:${testNodeAddress}:1000000:2000000000:100`
+        memo: `TB:V2:LIST:${testNodeAddress}:100000000000:200000000000000:1040`
       });
 
       console.log('maliciousTxHash', maliciousTxHash)
