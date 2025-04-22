@@ -32,6 +32,7 @@ export function populateNodesWithNetworkInfo (nodes: NodeListing[], officialNode
     }
 
     populateNode.isHidden = shouldBeHidden(populateNode, officialNode, minimumBondInRune)
+    populateNode.isYieldiGuarded = shouldBeYieldGuarded(officialNode)
 
     return populateNode
   });
@@ -48,6 +49,15 @@ function shouldBeHidden(populateNode: Omit<NodeDTO, 'isHidden'>, officialNode: N
   }
   return { hide: reasons.length > 0, reasons: reasons }
 }
+
+function shouldBeYieldGuarded(officialNode: Node): { hide: boolean, reasons: string[] | null } {
+  const reasons = []
+  if (Number(officialNode.total_bond) > OPTIMAL_BOND) {
+    reasons.push(`This node's total bond is equal to or higher than the network's optimal bond, making it inefficient for earning yield. Optimal bond: ${baseToAsset(baseAmount(OPTIMAL_BOND, 8)).amount().toString()} RUNE`)
+  }
+  return { hide: reasons.length > 0, reasons: reasons }
+}
+
 
 function computeActiveTimeInSeconds (activeTime: number, currentBlockHeight: number) {
     return (currentBlockHeight - activeTime) * 6
