@@ -16,8 +16,8 @@ export class NodeListing {
     @Column({ name: "minRune" })
     minRune!: number;
 
-    @Column({ name: "maxRune" })
-    maxRune!: number;
+    @Column({ name: "maxRune", nullable: true })
+    maxRune?: number;
 
     @Column({ name: "feePercentage" })
     feePercentage!: number;
@@ -30,6 +30,9 @@ export class NodeListing {
 
     @Column()
     timestamp!: Date;
+
+    @Column({ name: "targetTotalBond", type: "bigint", nullable: true })
+    targetTotalBond?: number;
 
     @OneToMany(() => WhitelistRequest, whitelistRequest => whitelistRequest.node)
     whitelistRequests!: WhitelistRequest[];

@@ -5,6 +5,5 @@ const router = Router();
 const nodeController = new NodeController();
 
 router.get('/', nodeController.getNodes);
-router.get('/:address', nodeController.getNodeByAddress);
 
 export default router; 

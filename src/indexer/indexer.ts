@@ -66,6 +66,14 @@ export class Indexer {
       for (const prefix of template.prefix) {
         if (action.metadata.send.memo.startsWith(prefix)) {
           try {
+            // Check if the action's block height matches the template's block height requirements
+            if (template.blockHeight !== undefined) {
+              if (action.height > template.blockHeight) {
+                logger.debug(`Skipping action ${action.in[0]?.txID} at height ${action.height} as it exceeds template block height ${template.blockHeight}`);
+                continue;
+              }
+            }
+            
             checkTransactionAmount(action, template.minAmount)
             const parser = getParser(template.parser);
             const repository = this.dbManager.getRepository(template.table);

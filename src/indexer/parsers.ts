@@ -125,12 +125,88 @@ export const parsers = {
 
     return nodeListing;
   },
+
+  nodeListingV2: async (action: MidgardAction, dbManager: DatabaseManager): Promise<ParserResult> => {
+    const memo = action.metadata.send.memo;
+    const parts = memo.split(':');
+    if (parts.length !== 7) {
+      throw new Error(`Invalid memo format for node listing V2: ${memo}`);
+    }
+
+    const nodeAddress = sanitizeString(parts[3]);
+
+    // Get official node info first to validate operator
+    const oficialNodes = await genericCache.getNodes();
+    const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress);
+
+    if (!officialNodeInfo) {
+      logger.warn(`Node list request: Node ${nodeAddress} not found in official nodes`);
+      throw new Error(`Node ${nodeAddress} not found in official nodes`);
+    }
+
+    // Verify that the sender is the actual node operator
+    if (action.in[0]?.address !== officialNodeInfo.node_operator_address) {
+      logger.warn(`Node list request rejected: Sender ${action.in[0]?.address} is not the node operator ${officialNodeInfo.node_operator_address}`);
+      throw new Error(`Only the node operator can list a node`);
+    }
+
+    const minRune = sanitizeNumber(parts[4]);
+    const targetTotalBond = sanitizeNumber(parts[5]);
+    const feePercentage = sanitizeNumber(parts[6]);
+
+    if (targetTotalBond < minRune) {
+      throw new Error(`targetTotalBond (${targetTotalBond}) must be greater than or equal to minRune (${minRune})`);
+    }
+
+    if (feePercentage < 0 || feePercentage > 10000) {
+      throw new Error(`feePercentage (${feePercentage}) must be between 0 and 100`);
+    }
+
+    const nodeListingRepo = dbManager.getRepository('node_listings');
+    
+    const existingNode = await nodeListingRepo.findOne({ 
+        where: { nodeAddress } 
+    }) as NodeListing | null;
+
+    if (existingNode) {
+        logger.info(`Updating existing node listing for address ${nodeAddress}`);
+        Object.assign(existingNode, {
+            operatorAddress: officialNodeInfo.node_operator_address,
+            minRune,
+            targetTotalBond,
+            feePercentage,
+            txId: sanitizeString(action.in[0].txID),
+            height: action.height,
+            timestamp: new Date(Math.floor(Number(action.date) / 1000000))
+        });
+        return existingNode;
+    }
+
+    const nodeListing = new NodeListing();
+    nodeListing.nodeAddress = nodeAddress;
+    nodeListing.operatorAddress = officialNodeInfo.node_operator_address;
+    nodeListing.minRune = minRune;
+    nodeListing.targetTotalBond = targetTotalBond;
+    nodeListing.feePercentage = feePercentage;
+    nodeListing.txId = sanitizeString(action.in[0]?.txID);
+    nodeListing.height = action.height;
+    nodeListing.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+
+    try {
+      await announceNewNode(nodeListing);
+      logger.info(`Successfully announced new node ${nodeAddress} on Twitter`);
+    } catch (error) {
+      logger.error(`Failed to announce new node ${nodeAddress} on Twitter:`, error);
+    }
+
+    return nodeListing;
+  },
+
   whitelistRequest: async (action: MidgardAction, dbManager: DatabaseManager) => {
     const memo = action.metadata.send.memo;
-
     const parts = memo.split(':');
     if (parts.length !== 5) {
-      throw new Error(`Invalid memo format for node listing: ${memo}`);
+      throw new Error(`Invalid memo format for whitelist request: ${memo}`);
     }
 
     const userAddress = sanitizeString(parts[3]);
@@ -189,9 +265,9 @@ export const parsers = {
 
     return whitelistRequest;
   },
+
   chatMessage: async (action: MidgardAction, dbManager: DatabaseManager) => {
     const memo = action.metadata.send.memo;
-
     const parts = memo.split(':');
     if (parts.length !== 4) {
       throw new Error(`Invalid memo format for chat message: ${memo}`);
@@ -263,7 +339,7 @@ export const parsers = {
     chatMessage.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
 
     return chatMessage;
-  } 
+  }
 };
 
 export type ParserFunction = (action: MidgardAction, dbManager: DatabaseManager) => Promise<ParserResult>;

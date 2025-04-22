@@ -25,140 +25,303 @@ describe('Parser Security Tests', () => {
   });
 
   describe('Node Listing Parser Security Tests', () => {
-    it('should reject node listing with impersonated sender', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1wd59r6pn0fdaxpu2vcgjypfzr9qh34rhml07ns:thor1drm88nvzn8qclrddac876ectt548cscgukm62d:100000000000:5000000000000:1500'
-          }
-        },
-        in: [{
-          address: 'thor1fakeaddress', // Different from operator address
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
+    describe('V1 Format Tests (height <= 20810526)', () => {
+      it('should add node listing with V1 format', async () => {
+        const validAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8:1000000:2000000:100'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810526, // Last valid block for V1
+          date: '1234567890000000'
+        };
 
-      await expect(getParser('nodeListing')(maliciousAction, dbManager))
-        .rejects
-        .toThrow('Impersonated node operator');
+        expect(await getParser('nodeListing')(validAction, dbManager)).toEqual({
+          "feePercentage": 100,
+          "height": 20810526,
+          "minRune": 1000000,
+          "maxRune": 2000000,
+          "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+          "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+          "timestamp": new Date("1970-01-15T06:56:07.890Z"),
+          "txId": "fake-tx-id"
+        });
+      });
+
+      it('should reject node listing with maxRune less than minRune in V1 format', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8:2000000:1000000:100'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810526,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListing')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('maxRune (1000000) must be greater than or equal to minRune (2000000)');
+      });
+
+      it('should reject node listing with invalid fee percentage in V1 format', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8:1000000:2000000:10001'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810526,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListing')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('feePercentage (10001) must be between 0 and 100');
+      });
     });
 
-    it('should reject node listing with invalid memo format', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1address:thor1operator:1000000:2000000' // Missing fee percentage
-          }
-        },
-        in: [{
-          address: 'thor1operator',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
+    describe('V2 Format Tests (height > 20810526)', () => {
+      it('should reject node listing with impersonated sender', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1wd59r6pn0fdaxpu2vcgjypfzr9qh34rhml07ns:100000000000:5000000000000:1500'
+            }
+          },
+          in: [{
+            address: 'thor1fakeaddress', // Different from operator address
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527, // First block for V2
+          date: '1234567890000000'
+        };
 
-      await expect(getParser('nodeListing')(maliciousAction, dbManager))
-        .rejects
-        .toThrow('Invalid memo format');
+        await expect(getParser('nodeListingV2')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('Only the node operator can list a node');
+      });
+
+      it('should reject node listing with invalid memo format', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1address:thor1operator:1000000' // Missing fee percentage
+            }
+          },
+          in: [{
+            address: 'thor1operator',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListingV2')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('Invalid memo format for node listing V2');
+      });
+
+      it('should reject node listing for non-official node', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1fakeaddress:thor1fakeoperator:1000000:100'
+            }
+          },
+          in: [{
+            address: 'thor1fakeoperator',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListingV2')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('Node thor1fakeaddress not found in official nodes');
+      });
+
+      it('should add node listing with V2 format', async () => {
+        const validAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:1000000:2000000:100'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527,
+          date: '1234567890000000'
+        };
+
+        expect(await getParser('nodeListingV2')(validAction, dbManager)).toEqual({
+          "feePercentage": 100,
+          "height": 20810527,
+          "minRune": 1000000,
+          "targetTotalBond": 2000000,
+          "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+          "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+          "timestamp": new Date("1970-01-15T06:56:07.890Z"),
+          "txId": "fake-tx-id"
+        });
+      });
+
+      it('should reject node listing with targetTotalBond less than minRune', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:2000000:1000000:100'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListingV2')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('targetTotalBond (1000000) must be greater than or equal to minRune (2000000)');
+      });
+
+      it('should reject node listing with invalid fee percentage', async () => {
+        const maliciousAction: MidgardAction = {
+          type: 'send',
+          status: 'success',
+          pools: [],
+          metadata: {
+            send: {
+              memo: 'TB:V2:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:1000000:2000000:10001'
+            }
+          },
+          in: [{
+            address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          out: [{
+            address: 'thor1vault',
+            txID: 'fake-tx-id',
+            coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+          }],
+          height: 20810527,
+          date: '1234567890000000'
+        };
+
+        await expect(getParser('nodeListingV2')(maliciousAction, dbManager))
+          .rejects
+          .toThrow('feePercentage (10001) must be between 0 and 100');
+      });
     });
 
-    it('should reject node listing for non-official node', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1fakeaddress:thor1fakeoperator:1000000:2000000:100'
-          }
-        },
-        in: [{
-          address: 'thor1fakeoperator',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
-
-      await expect(getParser('nodeListing')(maliciousAction, dbManager))
-        .rejects
-        .toThrow('Node and node operator mismatch');
-    });
-
-    it('should add node listing', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8:1000000:2000000:100'
-          }
-        },
-        in: [{
-          address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
-
-      expect(await getParser('nodeListing')(maliciousAction, dbManager)).toEqual({"feePercentage": 100, "height": 1000, "maxRune": 2000000, "minRune": 1000000, "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t", "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8", "timestamp": new Date("1970-01-15T06:56:07.890Z"), "txId": "fake-tx-id"})
-    });
-
-    it('should edit existing node', async () => {
-
+    it('should edit existing node with V2 format', async () => {
       const nodeRepository = dbManager.getRepository('node_listings')
       
       await nodeRepository.save({
         nodeAddress: "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
         operatorAddress: "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
         minRune: 1000000,
-        maxRune: 2000000,
         feePercentage: 100,
         txId: "fake-tx-id",
         height: 20000,
         timestamp: new Date("1970-01-15T06:56:07.890Z")
-      })
+      });
 
       const existingNode = await nodeRepository.findOne({ 
         where: { nodeAddress: "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t" } 
       });
 
-      expect(existingNode?.id).toBe(1)
+      expect(existingNode?.id).toBe(1);
 
       const maliciousAction: MidgardAction = {
         type: 'send',
@@ -166,7 +329,7 @@ describe('Parser Security Tests', () => {
         pools: [],
         metadata: {
           send: {
-            memo: 'TB:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8:33333333:3333330000:6666'
+            memo: 'TB:V2:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:33333333:3333330000:6666'
           }
         },
         in: [{
@@ -183,65 +346,18 @@ describe('Parser Security Tests', () => {
         date: '1234567890000000'
       };
 
-      expect(await getParser('nodeListing')(maliciousAction, dbManager)).toEqual({"id": 1, "feePercentage": 6666, "height": 1000, "maxRune": 3333330000, "minRune": 33333333, "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t", "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8", "timestamp": new Date("1970-01-15T06:56:07.890Z"), "txId": "fake-tx-id"})
-    });
-
-    it('should reject node listing with maxRune less than minRune', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1node:thor1operator:2000000:1000000:100'
-          }
-        },
-        in: [{
-          address: 'thor1operator',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
-
-      await expect(getParser('nodeListing')(maliciousAction, dbManager))
-        .rejects
-        .toThrow('maxRune (1000000) must be greater than or equal to minRune (2000000)');
-    });
-
-    it('should reject node listing with invalid fee percentage', async () => {
-      const maliciousAction: MidgardAction = {
-        type: 'send',
-        status: 'success',
-        pools: [],
-        metadata: {
-          send: {
-            memo: 'TB:LIST:thor1node:thor1operator:1000000:2000000:10001'
-          }
-        },
-        in: [{
-          address: 'thor1operator',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        out: [{
-          address: 'thor1vault',
-          txID: 'fake-tx-id',
-          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
-        }],
-        height: 1000,
-        date: '1234567890000000'
-      };
-
-      await expect(getParser('nodeListing')(maliciousAction, dbManager))
-        .rejects
-        .toThrow('feePercentage (10001) must be between 0 and 100');
+      expect(await getParser('nodeListingV2')(maliciousAction, dbManager)).toEqual({
+        "id": 1,
+        "feePercentage": 6666,
+        "height": 1000,
+        "minRune": 33333333,
+        "maxRune": null,
+        "targetTotalBond": 3333330000,
+        "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+        "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+        "timestamp": new Date("1970-01-15T06:56:07.890Z"),
+        "txId": "fake-tx-id"
+      });
     });
   });
 

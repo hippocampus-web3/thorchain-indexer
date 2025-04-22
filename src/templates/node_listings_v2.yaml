@@ -2,7 +2,7 @@
 address: "thor1w9cqar9c4ed6jpe5gxvxdakx02ndud45khv8mp"
 
 # Valid memo prefixes to process
-prefix: ["TB:LIST"]
+prefix: ["TB:V2:LIST"]
 
 # Table name where data will be stored
 table: "node_listings"
@@ -12,6 +12,3 @@ parser: "nodeListing"
 
 # Minimum amount required
 minAmount: 10000000
-
-# Maximum block height for this format (V1)
-blockHeight: 20810526
