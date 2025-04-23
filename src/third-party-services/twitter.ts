@@ -107,7 +107,6 @@ export async function announceNewWhitelistRequest(request: WhitelistRequest): Pr
   const userUrl = `https://runebond.com/user-requests?user=${request.userAddress}`;
   const content = `📝 New Whitelist Request on RUNEBond!\n\n` +
     `🔗 Node: ${request.nodeAddress}\n` +
-    `👤 User: ${request.userAddress}\n` +
     `💰 Intended Bond: ${baseToAsset(baseAmount(request.intendedBondAmount)).amount().toString()} $RUNE\n\n` +
     `🔍 View details: ${userUrl}\n\n`
 
