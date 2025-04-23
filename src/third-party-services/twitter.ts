@@ -91,7 +91,7 @@ export async function announceNewNode(node: NodeListing): Promise<{ id: string, 
     `👤 Operator: ${node.operatorAddress}\n` +
     `💰 Fee: ${node.feePercentage / 100}%\n` +
     `📊 Min Rune: ${baseToAsset(baseAmount(node.minRune)).amount().toString()}\n` +
-    `📈 Max Rune: ${baseToAsset(baseAmount(node.maxRune)).amount().toString()}\n\n` +
+    `🎯 Target Total Bond: ${baseToAsset(baseAmount(node.targetTotalBond || 0)).amount().toString()} $RUNE\n\n` +
     `🔍 View details: ${nodeUrl}\n\n`
 
   return publishTweet(content);
@@ -107,7 +107,8 @@ export async function announceNewWhitelistRequest(request: WhitelistRequest): Pr
   const userUrl = `https://runebond.com/user-requests?user=${request.userAddress}`;
   const content = `📝 New Whitelist Request on RUNEBond!\n\n` +
     `🔗 Node: ${request.nodeAddress}\n` +
-    `👤 User: ${request.userAddress}\n\n` +
+    `👤 User: ${request.userAddress}\n` +
+    `💰 Intended Bond: ${baseToAsset(baseAmount(request.intendedBondAmount)).amount().toString()} $RUNE\n\n` +
     `🔍 View details: ${userUrl}\n\n`
 
   return publishTweet(content);
