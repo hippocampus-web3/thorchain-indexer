@@ -154,7 +154,8 @@ function calculateMaxTheoreticalTimeInNetwork(nodes: Node[], targetNode: Node, c
     // Each churn cycle is 259200 seconds (72 hours)
     // The node will be churned out after all older nodes that haven't requested to leave are churned
     // Add one week (604800 seconds) as a safety threshold for churn delays
-    const maxTimeInSeconds = (nodesToBeChurnedBeforeTarget * 259200);
+    const THRESHOLD_PER_CHURN_CYCLE = 86400;
+    const maxTimeInSeconds = (nodesToBeChurnedBeforeTarget * (259200 + THRESHOLD_PER_CHURN_CYCLE));
     
     return maxTimeInSeconds;
 }
