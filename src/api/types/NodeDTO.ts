@@ -15,6 +15,7 @@ export type NodeDTO = {
     slashPoints: any;
     activeTime: number;
     bondProvidersCount: any;
+    maxTimeToLeave: number;
     officialInfo: {
         currentFee: number;
         minimumBondInRune: number;
