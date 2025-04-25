@@ -32,7 +32,7 @@ export function populateNodesWithNetworkInfo (nodes: NodeListing[], officialNode
     }
 
     populateNode.isHidden = shouldBeHidden(populateNode, officialNode, minimumBondInRune)
-    populateNode.isYieldGuarded = shouldBeYieldGuarded(officialNode)
+    populateNode.isYieldGuarded = shouldBeYieldGuarded(officialNode, officialNodes)
 
     return populateNode
   });
@@ -50,14 +50,42 @@ function shouldBeHidden(populateNode: Omit<NodeDTO, 'isHidden'>, officialNode: N
   return { hide: reasons.length > 0, reasons: reasons }
 }
 
-function shouldBeYieldGuarded(officialNode: Node): { hide: boolean, reasons: string[] | null } {
-  const reasons = []
-  if (Number(officialNode.total_bond) > OPTIMAL_BOND) {
-    reasons.push(`This node's total bond is equal to or higher than the network's optimal bond, making it inefficient for earning yield. Optimal bond: ${baseToAsset(baseAmount(OPTIMAL_BOND, 8)).amount().toString()} RUNE`)
+function shouldBeYieldGuarded(officialNode: Node, allOficialNodes: Node[]): { hide: boolean, reasons: string[] | null } {
+  const reasons = [];
+  
+  // Only consider active nodes
+  const activeNodes = allOficialNodes.filter(node => node.status === 'Active');
+  
+  // Check if node has requested to leave
+  if (officialNode.requested_to_leave) {
+    reasons.push("This node has requested to leave the network and will go to Standby state in less than 3 days, temporarily stopping yield generation until it returns to Active state");
   }
-  return { hide: reasons.length > 0, reasons: reasons }
+  
+  // Check if node has highest slash points
+  const maxSlashPoints = Math.max(...activeNodes.map(node => Number(node.slash_points)));
+  if (Number(officialNode.slash_points) === maxSlashPoints) {
+    reasons.push("This node has the highest slash points in the network and will go to Standby state in less than 3 days, temporarily stopping yield generation until it returns to Active state");
+  }
+  
+  // Check if node has lowest total bond
+  const minTotalBond = Math.min(...activeNodes.map(node => Number(node.total_bond)));
+  if (Number(officialNode.total_bond) === minTotalBond) {
+    reasons.push("This node has the lowest total bond in the network and will go to Standby state in less than 3 days, temporarily stopping yield generation until it returns to Active state");
+  }
+  
+  // Check if node has oldest status_since
+  const oldestStatusSince = Math.min(...activeNodes.map(node => Number(node.status_since)));
+  if (Number(officialNode.status_since) === oldestStatusSince) {
+    reasons.push("This node is the oldest active node in the network and will go to Standby state in less than 3 days, temporarily stopping yield generation until it returns to Active state");
+  }
+  
+  // Original condition for optimal bond
+  if (Number(officialNode.total_bond) > OPTIMAL_BOND) {
+    reasons.push(`This node's total bond is equal to or higher than the network's optimal bond, making it inefficient for earning yield. Optimal bond: ${baseToAsset(baseAmount(OPTIMAL_BOND, 8)).amount().toString()} RUNE`);
+  }
+  
+  return { hide: reasons.length > 0, reasons: reasons.length > 0 ? reasons : null };
 }
-
 
 function computeActiveTimeInSeconds (activeTime: number, currentBlockHeight: number) {
     return (currentBlockHeight - activeTime) * 6
