@@ -93,7 +93,8 @@ export const parsers = {
             feePercentage,
             txId: sanitizeString(action.in[0].txID),
             height: action.height,
-            timestamp: new Date(Math.floor(Number(action.date) / 1000000))
+            timestamp: new Date(Math.floor(Number(action.date) / 1000000)),
+            isDelisted: false // Reset delisted status when re-listing
         });
         return existingNode;
     }
@@ -115,6 +116,7 @@ export const parsers = {
     nodeListing.txId = sanitizeString(action.in[0]?.txID);
     nodeListing.height = action.height;
     nodeListing.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+    nodeListing.isDelisted = false;
 
     try {
       await announceNewNode(nodeListing);
@@ -177,7 +179,8 @@ export const parsers = {
             feePercentage,
             txId: sanitizeString(action.in[0].txID),
             height: action.height,
-            timestamp: new Date(Math.floor(Number(action.date) / 1000000))
+            timestamp: new Date(Math.floor(Number(action.date) / 1000000)),
+            isDelisted: false
         });
         return existingNode;
     }
@@ -191,6 +194,7 @@ export const parsers = {
     nodeListing.txId = sanitizeString(action.in[0]?.txID);
     nodeListing.height = action.height;
     nodeListing.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+    nodeListing.isDelisted = false;
 
     try {
       await announceNewNode(nodeListing);
@@ -339,6 +343,52 @@ export const parsers = {
     chatMessage.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
 
     return chatMessage;
+  },
+
+  nodeDelist: async (action: MidgardAction, dbManager: DatabaseManager): Promise<ParserResult> => {
+    const memo = action.metadata.send.memo;
+    const parts = memo.split(':');
+    
+    if (parts.length !== 3) {
+      throw new Error(`Invalid memo format for node delist: ${memo}`);
+    }
+
+    const nodeAddress = sanitizeString(parts[2]);
+
+    // Get official node info first to validate operator
+    const oficialNodes = await genericCache.getNodes();
+    const officialNodeInfo = oficialNodes.find(on => on.node_address === nodeAddress);
+
+    if (!officialNodeInfo) {
+      logger.warn(`Node delist request: Node ${nodeAddress} not found in official nodes`);
+      throw new Error(`Node ${nodeAddress} not found in official nodes`);
+    }
+
+    // Verify that the sender is the actual node operator
+    if (action.in[0]?.address !== officialNodeInfo.node_operator_address) {
+      logger.warn(`Node delist request rejected: Sender ${action.in[0]?.address} is not the node operator ${officialNodeInfo.node_operator_address}`);
+      throw new Error(`Only the node operator can delist a node`);
+    }
+
+    const nodeListingRepo = dbManager.getRepository('node_listings');
+    
+    const existingNode = await nodeListingRepo.findOne({ 
+      where: { nodeAddress } 
+    }) as NodeListing | null;
+
+    if (!existingNode) {
+      logger.warn(`Node delist request: Node ${nodeAddress} not found in listings`);
+      throw new Error(`Node ${nodeAddress} not found in listings`);
+    }
+
+    existingNode.isDelisted = true;
+    existingNode.txId = sanitizeString(action.in[0].txID);
+    existingNode.height = action.height;
+    existingNode.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+    
+    logger.info(`Node ${nodeAddress} successfully delisted by operator ${officialNodeInfo.node_operator_address}`);
+
+    return existingNode;
   }
 };
 

@@ -1,0 +1,14 @@
+# Address to monitor
+address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
+
+# Valid memo prefixes to process
+prefix: ["TB:DELIST"]
+
+# Table name where data will be stored
+table: "node_listings"
+
+# Parser function to use
+parser: "nodeDelist"
+
+# Minimum amount required
+minAmount: 10000000 
