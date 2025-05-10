@@ -361,6 +361,206 @@ describe('Parser Security Tests', () => {
     });
   });
 
+  describe('Node Delisting Parser Tests', () => {
+    it('should reject delisting with impersonated sender', async () => {
+      const maliciousAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:DELIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t'
+          }
+        },
+        in: [{
+          address: 'thor1fakeaddress', // Different from operator address
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        height: 20810527,
+        date: '1234567890000000'
+      };
+
+      await expect(getParser('nodeDelist')(maliciousAction, dbManager))
+        .rejects
+        .toThrow('Only the node operator can delist a node');
+    });
+
+    it('should reject delisting with invalid memo format', async () => {
+      const maliciousAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:DELIST' // Missing node address
+          }
+        },
+        in: [{
+          address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        height: 20810527,
+        date: '1234567890000000'
+      };
+
+      await expect(getParser('nodeDelist')(maliciousAction, dbManager))
+        .rejects
+        .toThrow('Invalid memo format for node delist');
+    });
+
+    it('should reject delisting for non-existent node', async () => {
+      const maliciousAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:DELIST:thor16xxh3kmd4fsadhf4u92gdte2nnhlw8rhjgw245'
+          }
+        },
+        in: [{
+          address: 'thor1upuw8yvg96uf4nd6jfuq9s25284dzr45kyzarc',
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'fake-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        height: 20810527,
+        date: '1234567890000000'
+      };
+
+      await expect(getParser('nodeDelist')(maliciousAction, dbManager))
+        .rejects
+        .toThrow('Node thor16xxh3kmd4fsadhf4u92gdte2nnhlw8rhjgw245 not found in listings');
+    });
+
+    it('should successfully delist a node', async () => {
+      const nodeRepository = dbManager.getRepository('node_listings')
+      
+      // First create a valid node
+      await nodeRepository.save({
+        nodeAddress: "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+        operatorAddress: "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+        minRune: 1000000,
+        targetTotalBond: 2000000,
+        feePercentage: 100,
+        txId: "fake-tx-id",
+        height: 20000,
+        timestamp: new Date("1970-01-15T06:56:07.890Z"),
+        isDelisted: false
+      });
+
+      const delistAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:DELIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t'
+          }
+        },
+        in: [{
+          address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1000000' }]
+        }],
+        height: 20810527,
+        date: '1234567890000000'
+      };
+
+      const result = await getParser('nodeDelist')(delistAction, dbManager);
+      console.log('result', result)
+      expect(result).toEqual({
+        "id": 1,
+        "feePercentage": 100,
+        "height": 20810527,
+        "minRune": 1000000,
+        "maxRune": null,
+        "targetTotalBond": "2000000",
+        "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+        "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+        "timestamp": new Date("1970-01-15T06:56:07.890Z"),
+        "txId": "new-tx-id",
+        "isDelisted": true
+      });
+    });
+
+    it('should re-list a delisted node with V2 format', async () => {
+      const nodeRepository = dbManager.getRepository('node_listings')
+      
+      // Create a delisted node
+      await nodeRepository.save({
+        nodeAddress: "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+        operatorAddress: "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+        minRune: 1000000,
+        targetTotalBond: 2000000,
+        feePercentage: 100,
+        txId: "fake-tx-id",
+        height: 20000,
+        timestamp: new Date("1970-01-15T06:56:07.890Z"),
+        isDelisted: true
+      });
+
+      const reListAction: MidgardAction = {
+        type: 'send',
+        status: 'success',
+        pools: [],
+        metadata: {
+          send: {
+            memo: 'TB:V2:LIST:thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t:1500000:2500000:150'
+          }
+        },
+        in: [{
+          address: 'thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1500000' }]
+        }],
+        out: [{
+          address: 'thor1vault',
+          txID: 'new-tx-id',
+          coins: [{ asset: 'THOR.RUNE', amount: '1500000' }]
+        }],
+        height: 20810527,
+        date: '1234567890000000'
+      };
+
+      const result = await getParser('nodeListingV2')(reListAction, dbManager);
+      expect(result).toEqual({
+        "id": 1,
+        "feePercentage": 150,
+        "height": 20810527,
+        "minRune": 1500000,
+        "targetTotalBond": 2500000,
+        "nodeAddress": "thor1zhacxe8lmhu2a6nakxumsv5h8rzhauqsw74t2t",
+        "operatorAddress": "thor1crrv4y4ndyl9ppqvacfzfvux363v50xsstz4a8",
+        "timestamp": new Date("1970-01-15T06:56:07.890Z"),
+        "txId": "new-tx-id",
+        "maxRune": null,
+        "isDelisted": false
+      });
+    });
+  });
+
   describe('Whitelist Request Parser Security Tests', () => {
     it('should reject whitelist request with impersonated user address', async () => {
 

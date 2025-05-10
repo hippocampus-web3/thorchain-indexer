@@ -20,6 +20,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@xchainjs/xchain-thorchain": "^3.0.3",
     "@xchainjs/xchain-thornode": "^0.3.22",
     "@xchainjs/xchain-util": "^1.0.8",
     "axios": "^1.6.7",

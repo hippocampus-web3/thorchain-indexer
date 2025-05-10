@@ -34,6 +34,9 @@ export class NodeListing {
     @Column({ name: "targetTotalBond", type: "bigint", nullable: true })
     targetTotalBond?: number;
 
+    @Column({ name: "isDelisted", default: false })
+    isDelisted!: boolean;
+
     @OneToMany(() => WhitelistRequest, whitelistRequest => whitelistRequest.node)
     whitelistRequests!: WhitelistRequest[];
 

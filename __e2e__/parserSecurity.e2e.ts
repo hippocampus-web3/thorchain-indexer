@@ -5,9 +5,9 @@ import { baseAmount } from '@xchainjs/xchain-util'
 // as it requires real RUNE and interacts with the live network
 describe('Parser Security E2E Tests', () => {
   let thorchainClient: Client;
-  const recipient = "thor1w9cqar9c4ed6jpe5gxvxdakx02ndud45khv8mp"
+  const recipient = "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
   const minAmount = baseAmount(10000000)
-  const testNodeAddress = "thor12485vhyan4ssnexf77l8rempt0xa2k86j58d7f"
+  const testNodeAddress = "thor1z6lg2u2kxccnmz3xy65856mcuslwaxcvx56uuk"
 
   beforeAll(async () => {
     thorchainClient = new Client({
@@ -79,6 +79,41 @@ describe('Parser Security E2E Tests', () => {
         recipient,
         amount: minAmount,
         memo: 'TB:WHT:thor12z69uvtwxlj2j9c5cqrnnfqy7s2twrqmvqvj20:thor1jqsdv03pp867t98d0kwe0pzl5ks6q0f9fvf3ha:100000000'
+      });
+
+      console.log('maliciousTxHash', maliciousTxHash)
+    });
+  });
+
+  describe('Real Network delist', () => {
+    it('Without minimun amount', async () => {
+      const maliciousTxHash = await thorchainClient.transfer({
+        walletIndex: 0,
+        recipient,
+        amount: baseAmount(9999),
+        memo: `TB:DELIST:${testNodeAddress}`
+      });
+
+      console.log('maliciousTxHash', maliciousTxHash)
+    });
+
+    it('Impersonating user address', async () => {
+      const maliciousTxHash = await thorchainClient.transfer({
+        walletIndex: 0,
+        recipient,
+        amount: minAmount,
+        memo: `TB:DELIST:${testNodeAddress}`
+      });
+
+      console.log('maliciousTxHash', maliciousTxHash)
+    });
+
+    it('No listed node', async () => {
+      const maliciousTxHash = await thorchainClient.transfer({
+        walletIndex: 0,
+        recipient,
+        amount: minAmount,
+        memo: 'TB:DELIST:thor12z69uvtwxlj2j9c5cqrnnfqy7s2twrqmvqvj20'
       });
 
       console.log('maliciousTxHash', maliciousTxHash)
