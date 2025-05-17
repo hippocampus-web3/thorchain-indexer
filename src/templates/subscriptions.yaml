@@ -1,0 +1,14 @@
+# Address to monitor
+address: "thor1xazgmh7sv0p393t9ntj6q9p52ahycc8jjlaap9"
+
+# Valid memo prefixes to process
+prefix: ["TB:SUB"]
+
+# Table name where data will be stored
+table: "subscriptions"
+
+# Parser function to use
+parser: "subscription"
+
+# Minimum amount required
+minAmount: 100000000 

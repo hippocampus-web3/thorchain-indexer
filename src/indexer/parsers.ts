@@ -434,6 +434,50 @@ export const parsers = {
     logger.info(`Node ${nodeAddress} successfully delisted by operator ${officialNodeInfo.node_operator_address}`);
 
     return existingNode;
+  },
+
+  subscription: async (action: MidgardAction, dbManager: DatabaseManager): Promise<ParserResult> => {
+    const memo = action.metadata.send.memo;
+    const parts = memo.split(':');
+    if (parts.length !== 3) {
+      throw new Error(`Invalid memo format for subscription: ${memo}`);
+    }
+
+    const subscriptionCode = sanitizeString(parts[2]);
+
+    const subscriptionRepo = dbManager.getRepository('subscriptions');
+    
+    const existingSubscription = await subscriptionRepo.findOne({
+      where: {
+        subscription_code: subscriptionCode
+      }
+    });
+
+    if (!existingSubscription) {
+      logger.warn(`Subscription renewal rejected: Invalid subscription code ${subscriptionCode}`);
+      throw new Error(`Invalid subscription code ${subscriptionCode}`);
+    }
+
+    const runeAmount = action.in[0]?.coins?.find(coin => coin.asset === 'THOR.RUNE')?.amount || '0';
+    const runeAmountNumber = Number(runeAmount) / 1e8; 
+
+    const additionalMonths = Math.floor(runeAmountNumber);
+    
+    if (additionalMonths < 1) {
+      throw new Error('Minimum payment of 1 RUNE required for subscription renewal');
+    }
+
+    const currentDate = existingSubscription.subscribed_until || new Date();
+    const newExpirationDate = new Date(currentDate);
+    newExpirationDate.setMonth(newExpirationDate.getMonth() + additionalMonths);
+
+    Object.assign(existingSubscription, {
+      subscribed_until: newExpirationDate,
+      enabled: true
+    });
+
+    logger.info(`Renewed subscription ${subscriptionCode} until ${newExpirationDate.toISOString()}`);
+    return existingSubscription;
   }
 };
 
