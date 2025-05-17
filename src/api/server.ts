@@ -20,6 +20,7 @@ app.use(helmet());
 app.use(cors());
 app.use(compression());
 app.use(express.json());
+app.set('trust proxy', true);
 
 app.use('/api/nodes', require('./routes/nodeRoutes').default);
 app.use('/api/whitelist', require('./routes/whitelistRoutes').default);
