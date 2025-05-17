@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  postgres:
+  postgres-indexer:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
@@ -10,7 +10,39 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_indexer:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-history:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: runebond_history
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data_history:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  postgres-notifier:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: runebond_notifier
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data_notifier:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -24,7 +56,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: test_thorchain_indexer
     ports:
-      - "5433:5432"
+      - "5444:5432"
     volumes:
       - postgres_test_data:/var/lib/postgresql/data
     healthcheck:
@@ -41,13 +73,28 @@ services:
     ports:
       - "5050:80"
     depends_on:
-      postgres:
+      postgres-indexer:
         condition: service_healthy
     volumes:
       - pgadmin_data:/var/lib/pgadmin
       - ./servers.json:/pgadmin4/servers.json
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  redisinsight:
+    image: redislabs/redisinsight
+    ports:
+      - "8001:8001"
+
 volumes:
-  postgres_data:
+  postgres_data_indexer:
+  postgres_data_history:
+  postgres_data_notifier:
   pgadmin_data: 
   postgres_test_data:
+  redis_data:

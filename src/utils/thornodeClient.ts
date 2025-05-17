@@ -1,4 +1,4 @@
-import { Configuration, MimirApi, NetworkApi, NodeBondProvider, NodesApi, NodesResponse } from "@xchainjs/xchain-thornode";
+import { Configuration, MimirApi, NetworkApi, NodesApi, NodesResponse } from "@xchainjs/xchain-thornode";
 import logger from "./logger";
 import axios from "axios";
 
