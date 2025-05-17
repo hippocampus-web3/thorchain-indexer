@@ -8,8 +8,10 @@ import { WhitelistRequest } from '../entities/WhitelistRequest';
 import { ChatMessage } from '../entities/ChatMessage';
 import xss from 'xss';
 import { checkTransactionAmount } from '../utils/checkTransactionAmount';
+import { NotificationService } from '../services/notificationService';
 
 const CHAT_COST_PER_MESSAGE_USERS = 100000000
+const notificationService = NotificationService.getInstance();
 
 export interface ParserResult {
   [key: string]: any;
@@ -105,6 +107,11 @@ export const parsers = {
     if (!officialNodeInfo) {
       logger.warn(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
       throw new Error(`Node list request: Node and node operator mismatch ${nodeAddress} ${operatorAddress}`);
+    }
+
+    if (action.in[0]?.address !== officialNodeInfo.node_operator_address) {
+      logger.warn(`Node list request rejected: Sender ${action.in[0]?.address} is not the node operator ${officialNodeInfo.node_operator_address}`);
+      throw new Error(`Only the node operator can list a node`);
     }
 
     const nodeListing = new NodeListing();
@@ -249,6 +256,12 @@ export const parsers = {
         timestamp: new Date(Math.floor(Number(action.date) / 1000000)),
         status: 'pending' // Reset status when updating
       });
+      // Emit notification for new whitelist request
+      await notificationService.emitWhitelistRequest(
+        nodeAddress,
+        userAddress,
+        `UPDATED: Intended bond amount: ${intendedBondAmount} RUNE`
+      );
       return existingRequest;
     }
 
@@ -266,6 +279,13 @@ export const parsers = {
     } catch (error) {
       logger.error(`Failed to announce new whitelist request for user ${userAddress} on Twitter:`, error);
     }
+
+    // Emit notification for new whitelist request
+    await notificationService.emitWhitelistRequest(
+      nodeAddress,
+      userAddress,
+      `Intended bond amount: ${intendedBondAmount} RUNE`
+    );
 
     return whitelistRequest;
   },
@@ -341,6 +361,31 @@ export const parsers = {
     chatMessage.txId = sanitizeString(action.in[0].txID);
     chatMessage.height = action.height;
     chatMessage.timestamp = new Date(Math.floor(Number(action.date) / 1000000));
+
+    // Emit notification for chat message to node
+    await notificationService.emitChatMessage(
+      nodeAddress,
+      userAddress,
+      message
+    );
+
+    // Emit notification to users with whitelist requests
+    const whitelistRepo = dbManager.getRepository('whitelist_requests');
+    const pendingRequests = await whitelistRepo.find({
+      where: {
+        nodeAddress
+      }
+    }) as WhitelistRequest[];
+
+    // Emit message to each user with whitelist request
+    for (const request of pendingRequests) {
+      await notificationService.emitChatMessage(
+        nodeAddress,
+        request.userAddress,
+        message,
+        true
+      );
+    }
 
     return chatMessage;
   },

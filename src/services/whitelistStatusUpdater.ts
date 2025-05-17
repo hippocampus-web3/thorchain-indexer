@@ -3,6 +3,7 @@ import { WhitelistRequest } from '../entities/WhitelistRequest';
 import { genericCache } from '../utils/genericCache';
 import logger from '../utils/logger';
 import { WhitelistRequestStatus } from '../api/types/WhitelistDTO';
+import { NotificationService } from './notificationService';
 
 export class WhitelistStatusUpdater {
   private static instance: WhitelistStatusUpdater;
@@ -10,8 +11,11 @@ export class WhitelistStatusUpdater {
   private updateInterval: number = 30 * 1000; // 30 secs
   private readonly DELAY_BETWEEN_UPDATES = 500;
   private readonly REJECTION_THRESHOLD_DAYS = 3;
+  private notificationService: NotificationService;
 
-  private constructor() {}
+  private constructor() {
+    this.notificationService = NotificationService.getInstance();
+  }
 
   public static getInstance(): WhitelistStatusUpdater {
     if (!WhitelistStatusUpdater.instance) {
@@ -73,10 +77,21 @@ export class WhitelistStatusUpdater {
         }
 
         if (request.status !== newStatus || Number(request.realBond) !== Number(bondInfo.bond)) {
+          const oldStatus = request.status;
           request.status = newStatus;
           request.realBond = bondInfo.bond;
           await AppDataSourceApi.getRepository(WhitelistRequest).save(request);
           logger.info(`Updated whitelist request ${request.id} status to ${newStatus} and realBond to ${bondInfo.bond}`);
+
+          // Emit notifications for status changes
+          if (oldStatus === 'pending' && newStatus === 'approved') {
+            await this.notificationService.emitWhitelistResponse(
+              request.nodeAddress,
+              request.userAddress,
+              'whitelist_accepted',
+              'Your whitelist request has been approved'
+            );
+          }
           continue;
         }
 
@@ -89,6 +104,14 @@ export class WhitelistStatusUpdater {
             request.status = 'rejected';
             await AppDataSourceApi.getRepository(WhitelistRequest).save(request);
             logger.info(`Request ${request.id} automatically rejected after ${requestAgeInDays.toFixed(2)} days`);
+
+            // Emit notification for automatic rejection
+            await this.notificationService.emitWhitelistResponse(
+              request.nodeAddress,
+              request.userAddress,
+              'whitelist_rejected',
+              `Request automatically rejected after ${this.REJECTION_THRESHOLD_DAYS} days of inactivity`
+            );
           }
         }
       } catch (error) {
