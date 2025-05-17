@@ -3,7 +3,8 @@ export type NotificationType =
   | 'whitelist_request'
   | 'whitelist_accepted'
   | 'whitelist_rejected'
-  | 'node_chat_message';
+  | 'node_chat_message'
+  | 'subscription_active';
 
 export type BaseNotificationPayload = {
   nodeName: string;
@@ -30,12 +31,19 @@ export type ChatMessagePayload = BaseNotificationPayload & {
   nodeChatUrl: string;
 };
 
+export type SubscriptionActivePayload = BaseNotificationPayload & {
+  channel: string;
+  thorchainAddress: string;
+  expirationDate: string;
+};
+
 export type NotificationPayload = {
   node_status_changed: NodeStatusPayload;
   whitelist_request: WhitelistRequestPayload;
   whitelist_accepted: WhitelistResponsePayload;
   whitelist_rejected: WhitelistResponsePayload;
   node_chat_message: ChatMessagePayload;
+  subscription_active: SubscriptionActivePayload;
 };
 
 export type NotificationJob = {

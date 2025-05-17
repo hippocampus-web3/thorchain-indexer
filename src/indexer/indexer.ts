@@ -5,17 +5,20 @@ import { getParser } from './parsers';
 import { Template, MidgardAction } from '../types';
 import logger from '../utils/logger';
 import { checkTransactionAmount } from '../utils/checkTransactionAmount';
+import { NotificationService } from '../services/notificationService';
 
 export class Indexer {
   private midgardClient: MidgardClient;
   private dbManager: DatabaseManager;
   private templateLoader: TemplateLoader;
   private templates: Template[] = [];
+  private notificationService: NotificationService;
 
   constructor(dbManager: DatabaseManager) {
     this.midgardClient = new MidgardClient();
     this.dbManager = dbManager;
     this.templateLoader = new TemplateLoader();
+    this.notificationService = NotificationService.getInstance();
   }
 
   async initialize() {
@@ -79,6 +82,23 @@ export class Indexer {
             const repository = this.dbManager.getRepository(template.table);
             const parsedData = await parser(action, this.dbManager);
             await repository.save(parsedData);
+
+            if (template.table === 'subscriptions' && parsedData.subscribed_until) {
+              await this.notificationService.emitSubscriptionActive(
+                parsedData.observable_address,
+                'subscription_active',
+                {
+                  nodeName: '',
+                  nodeDashboardUrl: '',
+                  channel: parsedData.channel,
+                  thorchainAddress: parsedData.observable_address,
+                  expirationDate: parsedData.subscribed_until.toISOString(),
+                  appUrl: `${process.env.RUNEBOND_URL || "https://runebond.com"}/nodes`
+                }
+              );
+              logger.info(`Subscription active notification sent for address ${parsedData.observable_address} until ${parsedData.subscribed_until.toISOString()}`);
+            }
+
             logger.debug(`Saved action ${action.in[0]?.txID} for template ${template.table}`);
           } catch (error) {
             if (error instanceof Error && error.message.includes('does not exist')) {

@@ -11,7 +11,7 @@ describe('Parser Security E2E Tests', () => {
 
   beforeAll(async () => {
     thorchainClient = new Client({
-      phrase: process.env.PHRASE_MAINNET,
+      phrase: process.env.PHRASE_MAINNET_RB,
     })
   });
 
@@ -116,6 +116,17 @@ describe('Parser Security E2E Tests', () => {
         memo: 'TB:DELIST:thor12z69uvtwxlj2j9c5cqrnnfqy7s2twrqmvqvj20'
       });
 
+      console.log('maliciousTxHash', maliciousTxHash)
+    });
+
+    it('Email subscription', async () => {
+      const code = ''
+      const maliciousTxHash = await thorchainClient.transfer({
+        walletIndex: 0,
+        recipient,
+        amount: baseAmount(10000000),
+        memo: `TB:SUB:${code}`
+      });
       console.log('maliciousTxHash', maliciousTxHash)
     });
   });

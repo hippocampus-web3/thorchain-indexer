@@ -6,35 +6,44 @@ import logger from './utils/logger';
 import { ChatMessage } from './entities/ChatMessage';
 
 export class DatabaseManager {
+  private mainDataSource: DataSource;
+  private subscriptionDataSource: DataSource;
 
-  private dataSource: DataSource;
-
-  constructor(dataSource: DataSource) {
-    this.dataSource = dataSource;
+  constructor(mainDataSource: DataSource, subscriptionDataSource: DataSource) {
+    this.mainDataSource = mainDataSource;
+    this.subscriptionDataSource = subscriptionDataSource;
   }
 
   async initialize() {
     try {
-      logger.info('Initializing database connection...');
-      await this.dataSource.initialize();
-      logger.info('Database connection initialized successfully');
+      logger.info('Initializing main database connection...');
+      await this.mainDataSource.initialize();
+      logger.info('Main database connection initialized successfully');
+
+      logger.info('Initializing subscription database connection...');
+      await this.subscriptionDataSource.initialize();
+      logger.info('Subscription database connection initialized successfully');
     } catch (error) {
-      logger.error('Failed to initialize database:', error);
+      logger.error('Failed to initialize databases:', error);
       throw error;
     }
   }
 
   getRepository(tableName: string): Repository<ObjectLiteral> {
     try {
+      if (tableName === 'subscriptions') {
+        return this.subscriptionDataSource.getRepository('subscriptions');
+      }
+
       switch (tableName) {
         case 'IndexerState':
-          return this.dataSource.getRepository(IndexerState);
+          return this.mainDataSource.getRepository(IndexerState);
         case 'node_listings':
-          return this.dataSource.getRepository(NodeListing);
+          return this.mainDataSource.getRepository(NodeListing);
         case 'whitelist_requests':
-          return this.dataSource.getRepository(WhitelistRequest);
+          return this.mainDataSource.getRepository(WhitelistRequest);
         case 'chat_messages':
-          return this.dataSource.getRepository(ChatMessage);
+          return this.mainDataSource.getRepository(ChatMessage);
         default:
           logger.error(`Repository not found for table: ${tableName}`);
           throw new Error(`No repository found for table: ${tableName}`);
@@ -47,11 +56,12 @@ export class DatabaseManager {
 
   async close() {
     try {
-      logger.info('Closing database connection...');
-      await this.dataSource.destroy();
-      logger.info('Database connection closed successfully');
+      logger.info('Closing database connections...');
+      await this.mainDataSource.destroy();
+      await this.subscriptionDataSource.destroy();
+      logger.info('Database connections closed successfully');
     } catch (error) {
-      logger.error('Error closing database connection:', error);
+      logger.error('Error closing database connections:', error);
       throw error;
     }
   }

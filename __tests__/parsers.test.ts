@@ -3,12 +3,13 @@ import { getParser } from '../src/indexer/parsers';
 import mockThornodeApi from '../__mocks__/thornode'
 import { DatabaseManager } from '../src/db';
 import { testDataSource } from '../test-utils/testDataSource';
+import { subscriptionDataSource } from '../src/data-source-subscription';
 
 describe('Parser Security Tests', () => {
   let dbManager: DatabaseManager;
 
   beforeAll(async () => {
-    dbManager = new DatabaseManager(testDataSource);
+    dbManager = new DatabaseManager(testDataSource, subscriptionDataSource);
     await dbManager.initialize();
     await testDataSource.runMigrations()
     await mockThornodeApi.init()

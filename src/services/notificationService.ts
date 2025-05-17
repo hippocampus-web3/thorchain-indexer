@@ -85,4 +85,19 @@ export class NotificationService {
       nodeChatUrl: `${process.env.RUNEBOND_URL || "https://runebond.com"}/nodes/${nodeAddress}`,
     });
   }
+
+  public async emitSubscriptionActive(
+    observableAddress: string,
+    type: 'subscription_active',
+    payload: {
+      nodeName: string;
+      nodeDashboardUrl: string;
+      channel: string;
+      thorchainAddress: string;
+      expirationDate: string;
+      appUrl: string,
+    }
+  ): Promise<void> {
+    await this.emitNotification(observableAddress, type, payload);
+  }
 } 
