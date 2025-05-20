@@ -57,7 +57,6 @@ export class SubscriptionController {
                         ...existingSubscription
                     },
                     is_new_subscription: false,
-                    message: 'Active subscription found'
                 });
             }
 
@@ -93,7 +92,6 @@ export class SubscriptionController {
                     ...result.raw[0]
                 },
                 is_new_subscription: true,
-                message: 'New subscription created'
             });
 
         } catch (error) {

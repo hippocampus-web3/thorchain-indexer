@@ -9,6 +9,7 @@ import { ChatMessage } from '../entities/ChatMessage';
 import xss from 'xss';
 import { checkTransactionAmount } from '../utils/checkTransactionAmount';
 import { NotificationService } from '../services/notificationService';
+import { baseToAsset, baseAmount } from '@xchainjs/xchain-util';
 
 const CHAT_COST_PER_MESSAGE_USERS = 100000000
 const notificationService = NotificationService.getInstance();
@@ -260,7 +261,7 @@ export const parsers = {
       await notificationService.emitWhitelistRequest(
         nodeAddress,
         userAddress,
-        `UPDATED: Intended bond amount: ${intendedBondAmount} RUNE`
+        `UPDATED: Intended bond amount: ${baseToAsset(baseAmount(intendedBondAmount)).amount().toString()} RUNE`
       );
       return existingRequest;
     }
@@ -284,7 +285,7 @@ export const parsers = {
     await notificationService.emitWhitelistRequest(
       nodeAddress,
       userAddress,
-      `Intended bond amount: ${intendedBondAmount} RUNE`
+      `Intended bond amount: ${baseToAsset(baseAmount(intendedBondAmount)).amount().toString()} RUNE`
     );
 
     return whitelistRequest;
